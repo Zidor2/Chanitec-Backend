@@ -1,9 +1,10 @@
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2');
+require('dotenv').config();
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '0210',
+    password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME || 'chanitec',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
@@ -12,13 +13,13 @@ const pool = mysql.createPool({
 });
 
 // Test the connection
-pool.getConnection()
-    .then(connection => {
-        console.log('Database connected successfully');
-        connection.release();
-    })
-    .catch(err => {
+pool.getConnection((err, connection) => {
+    if (err) {
         console.error('Error connecting to the database:', err);
-    });
+        return;
+    }
+    console.log('Successfully connected to the database');
+    connection.release();
+});
 
 module.exports = pool;
