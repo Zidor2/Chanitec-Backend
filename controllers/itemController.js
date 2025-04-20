@@ -1,4 +1,4 @@
-const pool = require('../../database/pool');
+const pool = require('../database/pool');
 const { processExcelFile } = require('../utils/excelProcessor');
 
 // Get all items

@@ -1,10 +1,10 @@
-const pool = require('../../database/pool');
+const pool = require('../database/pool');
 const crypto = require('crypto');
 
 // Get all quotes
 const getAllQuotes = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM quotes');
+        const [rows] = await pool.query('SELECT * FROM quotes ORDER BY date DESC, created_at DESC');
 
         // Convert field names from snake_case to camelCase for frontend
         const quotes = rows.map(row => ({

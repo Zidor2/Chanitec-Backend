@@ -1,4 +1,4 @@
-const pool = require('../../database/pool');
+const pool = require('../database/pool');
 
 // Get all labor items for a quote
 const getLaborItemsByQuoteId = async (req, res) => {

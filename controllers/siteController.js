@@ -1,4 +1,4 @@
-const pool = require('../../database/pool');
+const pool = require('../database/pool');
 
 // Get site by ID
 const getSiteById = async (req, res) => {

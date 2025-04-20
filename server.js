@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
-const mysql = require('mysql2/promise');
+const pool = require('./database/pool');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -22,27 +22,14 @@ app.use((req, res, next) => {
     next();
 });
 
-// Database connection configuration
-const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: '0210',
-    port: process.env.DB_PORT || 3306,
-    database: process.env.DB_NAME || 'chanitec'
-};
-
-console.log('Starting server with configuration:', {
-    port: port,
-    dbHost: dbConfig.host,
-    dbUser: dbConfig.user,
-    dbPort: dbConfig.port,
-    dbName: dbConfig.database
-});
-
 // Routes
 app.use('/api/clients', require('./routes/clientRoutes'));
 app.use('/api/quotes', require('./routes/quoteRoutes'));
 app.use('/api/sites', require('./routes/siteRoutes'));
+app.use('/api/supply-items', require('./routes/supplyItemRoutes'));
+app.use('/api/labor-items', require('./routes/laborItemRoutes'));
+app.use('/api/items', require('./routes/itemRoutes'));
+app.use('/api/debug', require('./routes/debugRoutes'));
 
 // Basic route
 app.get('/', (req, res) => {
@@ -56,43 +43,14 @@ app.get('/api', (req, res) => {
         endpoints: {
             clients: '/api/clients',
             sites: '/api/sites',
-            quotes: '/api/quotes'
+            quotes: '/api/quotes',
+            supplyItems: '/api/supply-items',
+            laborItems: '/api/labor-items',
+            items: '/api/items',
+            debug: '/api/debug'
         }
     });
 });
-
-// Health check endpoint
-app.get('/api/health', async (req, res) => {
-    try {
-        const connection = await mysql.createConnection(dbConfig);
-        await connection.ping();
-        await connection.end();
-        res.json({ status: 'ok', message: 'Database connection successful' });
-    } catch (error) {
-        console.error('Database connection failed:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Database connection failed',
-            error: error.message
-        });
-    }
-});
-
-// Import routes
-try {
-    const supplyItemRoutes = require('./routes/supplyItemRoutes');
-    const laborItemRoutes = require('./routes/laborItemRoutes');
-    const itemRoutes = require('./routes/itemRoutes');
-    const debugRoutes = require('./routes/debugRoutes');
-
-    app.use('/api/supply-items', supplyItemRoutes);
-    app.use('/api/labor-items', laborItemRoutes);
-    app.use('/api/items', itemRoutes);
-    app.use('/api/debug', debugRoutes);
-} catch (error) {
-    console.error('Error loading routes:', error.stack);
-    throw error;
-}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -107,18 +65,7 @@ app.use((req, res) => {
 });
 
 // Start server
-const server = app.listen(port, () => {
+app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
     console.log(`API available at http://localhost:${port}/api`);
-}).on('error', (error) => {
-    console.error('Error starting server:', error);
-});
-
-// Handle server shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received. Shutting down gracefully...');
-    server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-    });
 });
