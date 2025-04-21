@@ -69,5 +69,5 @@ app.use((req, res) => {
 // Start server
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-    console.log(`API available at http://localhost:${port}/api`);
+    console.log(`API available at= ${process.env.DB_HOST}:${port}`);
 });
