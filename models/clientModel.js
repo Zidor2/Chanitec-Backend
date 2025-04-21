@@ -1,4 +1,4 @@
-const pool = require('../../database/pool');
+const pool = require('../database/pool');
 
 class Client {
     static async create({ name, email, phone, address }) {
