@@ -6,7 +6,11 @@ const getAllClients = async (req, res) => {
         const [rows] = await pool.query('SELECT * FROM clients');
         res.json(rows);
     } catch (error) {
-        console.error('Error fetching clients:', error);
+        console.error('Error fetching clients:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+          });
         res.status(500).json({ error: 'Error fetching clients' });
     }
 };
