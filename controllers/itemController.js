@@ -60,7 +60,7 @@ const createItem = async (req, res) => {
     try {
         console.log('Attempting to insert item with values:', { description, price });
         const [result] = await pool.query(
-            'INSERT INTO items (id, description, price_euro) VALUES (UUID(), ?, ?)',
+            'INSERT INTO items (id, description, price) VALUES (UUID(), ?, ?)',
             [description, price]
         );
         console.log('Insert result:', result);
