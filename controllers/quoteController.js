@@ -111,15 +111,53 @@ const getQuoteById = async (req, res) => {
 
 const setReminderDate = async (req, res) => {
     const { reminderDate } = req.body;
-    const [result] = await pool.query('UPDATE quotes SET reminder_date = ? WHERE id = ?', [reminderDate, req.params.id]);
-    res.json({ message: 'Reminder date set' });
-}
+
+    try {
+        // Validate date format
+        if (!reminderDate || !Date.parse(reminderDate)) {
+            return res.status(400).json({ error: 'Invalid reminder date format' });
+        }
+
+        const [result] = await pool.query(
+            'UPDATE quotes SET reminder_date = ? WHERE id = ?',
+            [reminderDate, req.params.id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Quote not found' });
+        }
+
+        res.json({ message: 'Reminder date set successfully' });
+    } catch (error) {
+        console.error('Error setting reminder date:', error);
+        res.status(500).json({ error: 'Error setting reminder date' });
+    }
+};
 
 const confirmQuote = async (req, res) => {
     const { confirmed } = req.body;
-    const [result] = await pool.query('UPDATE quotes SET confirmed = ? WHERE id = ?', [confirmed, req.params.id]);
-    res.json({ message: 'Quote confirmed' });
-}
+
+    try {
+        // Validate confirmed value
+        if (typeof confirmed !== 'boolean') {
+            return res.status(400).json({ error: 'Confirmed status must be a boolean' });
+        }
+
+        const [result] = await pool.query(
+            'UPDATE quotes SET confirmed = ? WHERE id = ?',
+            [confirmed, req.params.id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Quote not found' });
+        }
+
+        res.json({ message: 'Quote confirmation status updated successfully' });
+    } catch (error) {
+        console.error('Error updating quote confirmation:', error);
+        res.status(500).json({ error: 'Error updating quote confirmation' });
+    }
+};
 
 // Create new quote
 const createQuote = async (req, res) => {
@@ -353,7 +391,9 @@ const updateQuote = async (req, res) => {
         total_labor_ht,
         total_ht,
         tva,
-        total_ttc
+        total_ttc,
+        confirmed,
+        reminder_date
     } = req.body;
 
     // Validate required fields
@@ -371,12 +411,14 @@ const updateQuote = async (req, res) => {
                 supply_exchange_rate = ?, supply_margin_rate = ?,
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
-                tva = ?, total_ttc = ?
+                tva = ?, total_ttc = ?, confirmed = ?, reminder_date = ?
             WHERE id = ?`,
             [
                 client_name, site_name, object, date, supply_description, labor_description,
                 supply_exchange_rate, supply_margin_rate, labor_exchange_rate, labor_margin_rate,
-                total_supplies_ht, total_labor_ht, total_ht, tva, total_ttc, req.params.id
+                total_supplies_ht, total_labor_ht, total_ht, tva, total_ttc,
+                confirmed || false, reminder_date || null,
+                req.params.id
             ]
         );
         if (result.affectedRows === 0) {
