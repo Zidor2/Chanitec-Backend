@@ -13,6 +13,8 @@ class Quote {
         labor_exchange_rate,
         labor_margin_rate,
         total_supplies_ht,
+        confirmed,
+        reminder_date,
         total_labor_ht,
         total_ht,
         tva,
@@ -23,13 +25,13 @@ class Quote {
                 id, client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc
-            ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminder_date
+            ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc
+                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminder_date
             ]
         );
         return this.findById(result.insertId);
@@ -59,6 +61,8 @@ class Quote {
         total_supplies_ht,
         total_labor_ht,
         total_ht,
+        confirmed,
+        reminder_date,
         tva,
         total_ttc
     }) {
@@ -69,13 +73,13 @@ class Quote {
                 supply_exchange_rate = ?, supply_margin_rate = ?,
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
-                tva = ?, total_ttc = ?
+                tva = ?, total_ttc = ?, confirmed = ?, reminder_date = ?
             WHERE id = ?`,
             [
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, id
+                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminder_date, id
             ]
         );
         return this.findById(id);

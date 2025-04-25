@@ -13,6 +13,8 @@ const getAllQuotes = async (req, res) => {
             siteName: row.site_name,
             object: row.object,
             date: row.date,
+            reminderDate: row.reminder_date,
+            confirmed: row.confirmed,
             supplyDescription: row.supply_description,
             laborDescription: row.labor_description,
             supplyExchangeRate: row.supply_exchange_rate,
@@ -106,6 +108,19 @@ const getQuoteById = async (req, res) => {
     }
 };
 
+
+const setReminderDate = async (req, res) => {
+    const { reminderDate } = req.body;
+    const [result] = await pool.query('UPDATE quotes SET reminder_date = ? WHERE id = ?', [reminderDate, req.params.id]);
+    res.json({ message: 'Reminder date set' });
+}
+
+const confirmQuote = async (req, res) => {
+    const { confirmed } = req.body;
+    const [result] = await pool.query('UPDATE quotes SET confirmed = ? WHERE id = ?', [confirmed, req.params.id]);
+    res.json({ message: 'Quote confirmed' });
+}
+
 // Create new quote
 const createQuote = async (req, res) => {
     // Start a transaction
@@ -113,7 +128,52 @@ const createQuote = async (req, res) => {
     await connection.beginTransaction();
 
     try {
-        // 1. Create the quote
+        // 1. Check for duplicate quote
+        const [existingQuotes] = await connection.query(
+            `SELECT id FROM quotes WHERE
+            client_name = ? AND
+            site_name = ? AND
+            object = ? AND
+            date = ? AND
+            supply_description = ? AND
+            labor_description = ? AND
+            supply_exchange_rate = ? AND
+            supply_margin_rate = ? AND
+            labor_exchange_rate = ? AND
+            labor_margin_rate = ? AND
+            total_supplies_ht = ? AND
+            total_labor_ht = ? AND
+            total_ht = ? AND
+            tva = ? AND
+            total_ttc = ?`,
+            [
+                req.body.clientName,
+                req.body.siteName,
+                req.body.object,
+                req.body.date,
+                req.body.supplyDescription,
+                req.body.laborDescription,
+                req.body.supplyExchangeRate,
+                req.body.supplyMarginRate,
+                req.body.laborExchangeRate,
+                req.body.laborMarginRate,
+                req.body.totalSuppliesHT,
+                req.body.totalLaborHT,
+                req.body.totalHT,
+                req.body.tva,
+                req.body.totalTTC
+            ]
+        );
+
+        if (existingQuotes.length > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                error: 'A quote with these exact details already exists',
+                existingQuoteId: existingQuotes[0].id
+            });
+        }
+
+        // 2. Create the quote
         const quoteData = {
             client_name: req.body.clientName,
             site_name: req.body.siteName,
