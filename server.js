@@ -6,6 +6,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const pool = require('./database/pool');
+const quoteRoutes = require('./routes/quoteRoutes');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -29,7 +30,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/clients', require('./routes/clientRoutes'));
-app.use('/api/quotes', require('./routes/quoteRoutes'));
+app.use('/api/quotes', quoteRoutes);
 app.use('/api/sites', require('./routes/siteRoutes'));
 app.use('/api/supply-items', require('./routes/supplyItemRoutes'));
 app.use('/api/labor-items', require('./routes/laborItemRoutes'));

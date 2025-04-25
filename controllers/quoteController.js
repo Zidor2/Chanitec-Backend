@@ -127,7 +127,9 @@ const setReminderDate = async (req, res) => {
             return res.status(404).json({ error: 'Quote not found' });
         }
 
-        res.json({ message: 'Reminder date set successfully' });
+        // Return the updated quote
+        const [updatedQuote] = await pool.query('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
+        res.json(updatedQuote[0]);
     } catch (error) {
         console.error('Error setting reminder date:', error);
         res.status(500).json({ error: 'Error setting reminder date' });
@@ -451,5 +453,6 @@ module.exports = {
     getQuoteById,
     createQuote,
     updateQuote,
-    deleteQuote
+    deleteQuote,
+    setReminderDate,
 };
