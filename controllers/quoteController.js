@@ -455,4 +455,5 @@ module.exports = {
     updateQuote,
     deleteQuote,
     setReminderDate,
+    confirmQuote
 };
