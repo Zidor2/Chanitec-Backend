@@ -119,7 +119,7 @@ const setReminderDate = async (req, res) => {
         }
 
         const [result] = await pool.query(
-            'UPDATE quotes SET reminder_date = ? WHERE id = ?',
+            'UPDATE quotes SET reminderDate = ? WHERE id = ?',
             [reminderDate, req.params.id]
         );
 
@@ -395,7 +395,7 @@ const updateQuote = async (req, res) => {
         tva,
         total_ttc,
         confirmed,
-        reminder_date
+        reminderDate
     } = req.body;
 
     // Validate required fields
@@ -413,13 +413,13 @@ const updateQuote = async (req, res) => {
                 supply_exchange_rate = ?, supply_margin_rate = ?,
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
-                tva = ?, total_ttc = ?, confirmed = ?, reminder_date = ?
+                tva = ?, total_ttc = ?, confirmed = ?, reminderDate = ?
             WHERE id = ?`,
             [
                 client_name, site_name, object, date, supply_description, labor_description,
                 supply_exchange_rate, supply_margin_rate, labor_exchange_rate, labor_margin_rate,
                 total_supplies_ht, total_labor_ht, total_ht, tva, total_ttc,
-                confirmed || false, reminder_date || null,
+                confirmed || false, reminderDate || null,
                 req.params.id
             ]
         );
