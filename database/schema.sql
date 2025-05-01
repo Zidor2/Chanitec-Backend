@@ -160,3 +160,6 @@ ALTER TABLE labor_items
         unit_price_dollar > 0 AND
         total_price_dollar > 0
     );
+
+-- Add reminderDate column to quotes table if it doesn't exist
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS reminderDate DATE NULL;

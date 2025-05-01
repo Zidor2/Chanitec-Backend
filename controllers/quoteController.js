@@ -13,7 +13,7 @@ const getAllQuotes = async (req, res) => {
             siteName: row.site_name,
             object: row.object,
             date: row.date,
-            reminderDate: row.reminder_date,
+            reminderDate: row.reminderDate,
             confirmed: row.confirmed,
             supplyDescription: row.supply_description,
             laborDescription: row.labor_description,
@@ -378,6 +378,11 @@ const createQuote = async (req, res) => {
 
 // Update quote
 const updateQuote = async (req, res) => {
+    // Log the entire request body
+    console.log('=== UPDATE QUOTE REQUEST BODY ===');
+    console.log(JSON.stringify(req.body, null, 2));
+    console.log('=== END REQUEST BODY ===');
+
     const {
         client_name,
         site_name,
