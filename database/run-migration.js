@@ -10,7 +10,7 @@ async function runMigration() {
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
         port: process.env.DB_PORT || 3306,
-        database: process.env.DB_NAME || 'chanitec',
+        database: process.env.DB_NAME || 'Chanitec',
         multipleStatements: true
     };
 

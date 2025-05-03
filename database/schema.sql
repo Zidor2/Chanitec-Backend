@@ -1,8 +1,8 @@
 -- MySQL Schema for Chanitec Pricing System
 
--- Create database if not exists
-CREATE DATABASE IF NOT EXISTS chanitec;
-USE chanitec;
+-- Create and use the database
+CREATE DATABASE IF NOT EXISTS Chanitec;
+USE Chanitec;
 
 -- Clients table
 CREATE TABLE IF NOT EXISTS clients (

@@ -1,5 +1,5 @@
 {
-    "name": "chanitec-backend",
+    "name": "Chanitec-backend",
     "version": "1.0.0",
     "description": "Chanitec Backend API",
     "main": "server.js",
