@@ -7,6 +7,8 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const pool = require('./database/pool');
 const quoteRoutes = require('./routes/quoteRoutes');
+const departmentRoutes = require('./routes/departmentRoutes');
+const employeeRoutes = require('./routes/employeeRoutes');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -36,6 +38,8 @@ app.use('/api/supply-items', require('./routes/supplyItemRoutes'));
 app.use('/api/labor-items', require('./routes/laborItemRoutes'));
 app.use('/api/items', require('./routes/itemRoutes'));
 app.use('/api/debug', require('./routes/debugRoutes'));
+app.use('/api/departments', departmentRoutes);
+app.use('/api/employees', employeeRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
@@ -58,7 +62,9 @@ app.get('/api', (req, res) => {
             supplyItems: '/api/supply-items',
             laborItems: '/api/labor-items',
             items: '/api/items',
-            debug: '/api/debug'
+            debug: '/api/debug',
+            departments: '/api/departments',
+            employees: '/api/employees'
         }
     });
 });
@@ -77,8 +83,6 @@ app.use((req, res) => {
     console.log(`404: ${req.method} ${req.url}`);
     res.status(404).json({ error: 'Route not found' });
 });
-
-
 
 // Start server
 app.listen(port, () => {
