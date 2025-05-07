@@ -6,6 +6,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const pool = require('./database/pool');
+const sequelize = require('./database/database');
 const quoteRoutes = require('./routes/quoteRoutes');
 const departmentRoutes = require('./routes/departmentRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
@@ -84,12 +85,20 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 
-// Start server
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-    console.log(`API available at= ${process.env.DB_HOST}:${port}`);
-});
+// Sync database and start server
+sequelize.sync({ alter: true })
+    .then(() => {
+        console.log('✅ Database synced successfully');
+        // Start server
+        app.listen(port, () => {
+            console.log(`Server is running on port ${port}`);
+            console.log(`API available at= ${process.env.DB_HOST}:${port}`);
+        });
 
-app.listen(port, "0.0.0.0", () => {
-    console.log(`✅ Server running on port ${port}`);
-  });
+        app.listen(port, "0.0.0.0", () => {
+            console.log(`✅ Server running on port ${port}`);
+        });
+    })
+    .catch(err => {
+        console.error('❌ Unable to sync database:', err);
+    });
