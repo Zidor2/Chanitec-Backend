@@ -12,7 +12,7 @@ const Department = sequelize.define('Department', {
         allowNull: false
     }
 }, {
-    timestamps: true,
+    timestamps: false,
     tableName: 'department'
 });
 
