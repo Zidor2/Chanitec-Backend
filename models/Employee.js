@@ -48,7 +48,8 @@ const Employee = sequelize.define('Employee', {
         allowNull: true
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    tableName: 'employee'
 });
 
 module.exports = Employee;
