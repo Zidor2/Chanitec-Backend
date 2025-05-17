@@ -18,20 +18,21 @@ class Quote {
         total_labor_ht,
         total_ht,
         tva,
-        total_ttc
+        total_ttc,
+        version = 0
     }) {
         const [result] = await pool.query(
             `INSERT INTO quotes (
                 id, client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate
-            ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate, version
+            ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate
+                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate, version
             ]
         );
         return this.findById(result.insertId);
@@ -64,7 +65,8 @@ class Quote {
         confirmed,
         reminderDate,
         tva,
-        total_ttc
+        total_ttc,
+        version
     }) {
         await pool.query(
             `UPDATE quotes SET
@@ -73,13 +75,13 @@ class Quote {
                 supply_exchange_rate = ?, supply_margin_rate = ?,
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
-                tva = ?, total_ttc = ?, confirmed = ?, reminderDate = ?
+                tva = ?, total_ttc = ?, confirmed = ?, reminderDate = ?, version = ?
             WHERE id = ?`,
             [
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate, id
+                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate, version, id
             ]
         );
         return this.findById(id);

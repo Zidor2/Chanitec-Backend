@@ -26,6 +26,7 @@ const getAllQuotes = async (req, res) => {
             totalHT: row.total_ht,
             tva: row.tva,
             totalTTC: row.total_ttc,
+            version: row.version,
             createdAt: row.created_at,
             updatedAt: row.updated_at
         }));
@@ -185,7 +186,8 @@ const createQuote = async (req, res) => {
             total_labor_ht = ? AND
             total_ht = ? AND
             tva = ? AND
-            total_ttc = ?`,
+            total_ttc = ? AND
+            version = ?`,
             [
                 req.body.clientName,
                 req.body.siteName,
@@ -201,7 +203,8 @@ const createQuote = async (req, res) => {
                 req.body.totalLaborHT,
                 req.body.totalHT,
                 req.body.tva,
-                req.body.totalTTC
+                req.body.totalTTC,
+                req.body.version || 0
             ]
         );
 
@@ -229,7 +232,8 @@ const createQuote = async (req, res) => {
             total_labor_ht: req.body.totalLaborHT,
             total_ht: req.body.totalHT,
             tva: req.body.tva,
-            total_ttc: req.body.totalTTC
+            total_ttc: req.body.totalTTC,
+            version: req.body.version || 0
         };
 
         // Generate quote ID
@@ -243,8 +247,8 @@ const createQuote = async (req, res) => {
                 supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate,
                 total_supplies_ht, total_labor_ht, total_ht,
-                tva, total_ttc
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                tva, total_ttc, version
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 quoteId,
                 quoteData.client_name,
@@ -261,7 +265,8 @@ const createQuote = async (req, res) => {
                 quoteData.total_labor_ht,
                 quoteData.total_ht,
                 quoteData.tva,
-                quoteData.total_ttc
+                quoteData.total_ttc,
+                quoteData.version || 0
             ]
         );
 
