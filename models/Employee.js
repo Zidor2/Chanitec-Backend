@@ -1,55 +1,35 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../database/database');
+const pool = require('../database/pool');
 
-const Employee = sequelize.define('Employee', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
-    full_name: {
-        type: DataTypes.STRING(100),
-        allowNull: false
-    },
-    civil_status: {
-        type: DataTypes.CHAR(1),
-        allowNull: false
-    },
-    birth_date: {
-        type: DataTypes.DATE,
-        allowNull: false
-    },
-    entry_date: {
-        type: DataTypes.DATE,
-        allowNull: false
-    },
-    seniority: {
-        type: DataTypes.STRING(50),
-        allowNull: false
-    },
-    contract_type: {
-        type: DataTypes.STRING(20),
-        allowNull: false
-    },
-    job_title: {
-        type: DataTypes.STRING(150),
-        allowNull: false
-    },
-    fonction: {
-        type: DataTypes.STRING(200),
-        allowNull: false
-    },
-    sub_type_id: {
-        type: DataTypes.INTEGER,
-        allowNull: true
-    },
-    type_description: {
-        type: DataTypes.TEXT,
-        allowNull: true
+class Employee {
+    static async create({ full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description }) {
+        const [result] = await pool.query(
+            'INSERT INTO employee (full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description]
+        );
+        return this.findById(result.insertId);
     }
-}, {
-    timestamps: false,
-    tableName: 'employee'
-});
+
+    static async findById(id) {
+        const [rows] = await pool.query('SELECT * FROM employee WHERE id = ?', [id]);
+        return rows[0];
+    }
+
+    static async findAll() {
+        const [rows] = await pool.query('SELECT * FROM employee');
+        return rows;
+    }
+
+    static async update(id, { full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description }) {
+        await pool.query(
+            'UPDATE employee SET full_name = ?, civil_status = ?, birth_date = ?, entry_date = ?, seniority = ?, contract_type = ?, job_title = ?, fonction = ?, sub_type_id = ?, type_description = ? WHERE id = ?',
+            [full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description, id]
+        );
+        return this.findById(id);
+    }
+
+    static async delete(id) {
+        await pool.query('DELETE FROM employee WHERE id = ?', [id]);
+    }
+}
 
 module.exports = Employee;

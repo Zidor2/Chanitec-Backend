@@ -1,62 +1,95 @@
 const Employee = require('../models/Employee');
 
 // Get all employees
-exports.getAllEmployees = async (req, res) => {
+const getAllEmployees = async (req, res) => {
     try {
         const employees = await Employee.findAll();
         res.json(employees);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error fetching employees:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
+        res.status(500).json({ error: 'Error fetching employees' });
     }
 };
 
 // Get employee by ID
-exports.getEmployeeById = async (req, res) => {
+const getEmployeeById = async (req, res) => {
     try {
-        const employee = await Employee.findByPk(req.params.id);
+        const employee = await Employee.findById(req.params.id);
         if (!employee) {
-            return res.status(404).json({ message: 'Employee not found' });
+            return res.status(404).json({ error: 'Employee not found' });
         }
         res.json(employee);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error fetching employee:', error);
+        res.status(500).json({ error: 'Error fetching employee' });
     }
 };
 
 // Create new employee
-exports.createEmployee = async (req, res) => {
+const createEmployee = async (req, res) => {
+    const { full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction } = req.body;
+
+    // Validate required fields
+    if (!full_name || !civil_status || !birth_date || !entry_date || !seniority || !contract_type || !job_title || !fonction) {
+        return res.status(400).json({ error: 'All required fields must be provided' });
+    }
+
     try {
-        const employee = await Employee.create(req.body);
-        res.status(201).json(employee);
+        const newEmployee = await Employee.create(req.body);
+        res.status(201).json(newEmployee);
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('Error creating employee:', error);
+        res.status(500).json({
+            error: 'Error creating employee',
+            details: error.message
+        });
     }
 };
 
 // Update employee
-exports.updateEmployee = async (req, res) => {
+const updateEmployee = async (req, res) => {
+    const { full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction } = req.body;
+
+    // Validate required fields
+    if (!full_name || !civil_status || !birth_date || !entry_date || !seniority || !contract_type || !job_title || !fonction) {
+        return res.status(400).json({ error: 'All required fields must be provided' });
+    }
+
     try {
-        const employee = await Employee.findByPk(req.params.id);
-        if (!employee) {
-            return res.status(404).json({ message: 'Employee not found' });
+        const updatedEmployee = await Employee.update(req.params.id, req.body);
+        if (!updatedEmployee) {
+            return res.status(404).json({ error: 'Employee not found' });
         }
-        await employee.update(req.body);
-        res.json(employee);
+        res.json(updatedEmployee);
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('Error updating employee:', error);
+        res.status(500).json({ error: 'Error updating employee' });
     }
 };
 
 // Delete employee
-exports.deleteEmployee = async (req, res) => {
+const deleteEmployee = async (req, res) => {
     try {
-        const employee = await Employee.findByPk(req.params.id);
+        const employee = await Employee.findById(req.params.id);
         if (!employee) {
-            return res.status(404).json({ message: 'Employee not found' });
+            return res.status(404).json({ error: 'Employee not found' });
         }
-        await employee.destroy();
-        res.json({ message: 'Employee deleted successfully' });
+        await Employee.delete(req.params.id);
+        res.status(204).send();
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error deleting employee:', error);
+        res.status(500).json({ error: 'Error deleting employee' });
     }
+};
+
+module.exports = {
+    getAllEmployees,
+    getEmployeeById,
+    createEmployee,
+    updateEmployee,
+    deleteEmployee
 };

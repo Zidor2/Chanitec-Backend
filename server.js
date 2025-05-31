@@ -12,10 +12,10 @@ const departmentRoutes = require('./routes/departmentRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT ;
 
 const allowedOrigins = [
-    process.env.FRONTEND_URL , 'http://localhost:3000'
+    process.env.FRONTEND_URL
 ]
 // Middleware
 app.use(cors({
