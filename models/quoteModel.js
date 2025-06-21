@@ -38,8 +38,8 @@ class Quote {
         return this.findById(result.insertId);
     }
 
-    static async findById(id) {
-        const [rows] = await pool.query('SELECT * FROM quotes WHERE id = ?', [id]);
+    static async findById(id, created_at) {
+        const [rows] = await pool.query('SELECT * FROM quotes WHERE id = ? AND created_at = ?', [id, created_at]);
         return rows[0];
     }
 
@@ -48,7 +48,7 @@ class Quote {
         return rows;
     }
 
-    static async update(id, {
+    static async update(id, created_at, {
         client_name,
         site_name,
         object,
@@ -76,19 +76,19 @@ class Quote {
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
                 tva = ?, total_ttc = ?, confirmed = ?, reminderDate = ?, version = ?
-            WHERE id = ?`,
+            WHERE id = ? AND created_at = ?`,
             [
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate, version, id
+                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate, version, id, created_at
             ]
         );
-        return this.findById(id);
+        return this.findById(id, created_at);
     }
 
-    static async delete(id) {
-        await pool.query('DELETE FROM quotes WHERE id = ?', [id]);
+    static async delete(id, created_at) {
+        await pool.query('DELETE FROM quotes WHERE id = ? AND created_at = ?', [id, created_at]);
     }
 
     static async getSupplyItems(quoteId) {
