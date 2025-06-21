@@ -26,7 +26,7 @@ const getAllQuotes = async (req, res) => {
             totalHT: row.total_ht,
             tva: row.tva,
             totalTTC: row.total_ttc,
-            version: row.version,
+            parentId: row.parentId,
             createdAt: row.created_at,
             updatedAt: row.updated_at
         }));
@@ -42,7 +42,7 @@ const getAllQuotes = async (req, res) => {
 const getQuoteById = async (req, res) => {
     try {
         // Get the quote
-        const [quoteRows] = await pool.query('SELECT * FROM quotes WHERE id = ? AND created_at = ?', [req.params.id, req.params.created_at]);
+        const [quoteRows] = await pool.query('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
 
         if (quoteRows.length === 0) {
             return res.status(404).json({ error: 'Quote not found' });
@@ -78,6 +78,7 @@ const getQuoteById = async (req, res) => {
             totalHT: quoteRows[0].total_ht,
             tva: quoteRows[0].tva,
             totalTTC: quoteRows[0].total_ttc,
+            parentId: quoteRows[0].parentId,
             createdAt: quoteRows[0].created_at,
             updatedAt: quoteRows[0].updated_at,
             supplyItems: supplyItems.map(item => ({
@@ -187,7 +188,7 @@ const createQuote = async (req, res) => {
             total_ht = ? AND
             tva = ? AND
             total_ttc = ? AND
-            version = ?`,
+            parentId = ?`,
             [
                 req.body.clientName,
                 req.body.siteName,
@@ -204,7 +205,7 @@ const createQuote = async (req, res) => {
                 req.body.totalHT,
                 req.body.tva,
                 req.body.totalTTC,
-                req.body.version || 0
+                req.body.parentId || 0
             ]
         );
 
@@ -233,7 +234,7 @@ const createQuote = async (req, res) => {
             total_ht: req.body.totalHT,
             tva: req.body.tva,
             total_ttc: req.body.totalTTC,
-            version: req.body.version || 0
+            parentId: req.body.parentId || 0
         };
 
         // Generate quote ID
@@ -247,7 +248,7 @@ const createQuote = async (req, res) => {
                 supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate,
                 total_supplies_ht, total_labor_ht, total_ht,
-                tva, total_ttc, version
+                tva, total_ttc, parentId
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 quoteId,
@@ -266,7 +267,7 @@ const createQuote = async (req, res) => {
                 quoteData.total_ht,
                 quoteData.tva,
                 quoteData.total_ttc,
-                quoteData.version || 0
+                quoteData.parentId || 0
             ]
         );
 
@@ -342,6 +343,7 @@ const createQuote = async (req, res) => {
             totalHT: quoteRows[0].total_ht,
             tva: quoteRows[0].tva,
             totalTTC: quoteRows[0].total_ttc,
+            parentId: quoteRows[0].parentId,
             createdAt: quoteRows[0].created_at,
             updatedAt: quoteRows[0].updated_at,
             supplyItems: supplyItems.map(item => ({
@@ -405,7 +407,8 @@ const updateQuote = async (req, res) => {
         tva,
         total_ttc,
         confirmed,
-        reminderDate
+        reminderDate,
+        parentId
     } = req.body;
 
     // Validate required fields
@@ -423,20 +426,21 @@ const updateQuote = async (req, res) => {
                 supply_exchange_rate = ?, supply_margin_rate = ?,
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
-                tva = ?, total_ttc = ?, confirmed = ?, reminderDate = ?
-            WHERE id = ? AND created_at = ?`,
+                tva = ?, total_ttc = ?, confirmed = ?, reminderDate = ?,
+                parentId = ?
+            WHERE id = ?`,
             [
                 client_name, site_name, object, date, supply_description, labor_description,
                 supply_exchange_rate, supply_margin_rate, labor_exchange_rate, labor_margin_rate,
                 total_supplies_ht, total_labor_ht, total_ht, tva, total_ttc,
-                confirmed || false, reminderDate || null,
-                req.params.id, req.params.created_at
+                confirmed || false, reminderDate || null, parentId || null,
+                req.params.id
             ]
         );
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Quote not found' });
         }
-        const [updatedQuote] = await pool.query('SELECT * FROM quotes WHERE id = ? AND created_at = ?', [req.params.id, req.params.created_at]);
+        const [updatedQuote] = await pool.query('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
         res.json(updatedQuote[0]);
     } catch (error) {
         console.error('Error updating quote:', error);
@@ -447,7 +451,7 @@ const updateQuote = async (req, res) => {
 // Delete quote
 const deleteQuote = async (req, res) => {
     try {
-        const [result] = await pool.query('DELETE FROM quotes WHERE id = ? AND created_at = ?', [req.params.id, req.params.created_at]);
+        const [result] = await pool.query('DELETE FROM quotes WHERE id = ?', [req.params.id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Quote not found' });
         }
