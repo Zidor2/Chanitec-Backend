@@ -19,7 +19,7 @@ class Quote {
         total_ht,
         tva,
         total_ttc,
-        version = 0
+        version
     }) {
         const [result] = await pool.query(
             `INSERT INTO quotes (
