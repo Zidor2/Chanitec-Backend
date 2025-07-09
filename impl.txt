@@ -1,0 +1,73 @@
+# Quote Confirmation & Reminder Date API Implementation
+
+## 1. Set Quote Confirmation
+
+- **Endpoint:** `PATCH /quotes/:id/confirm`
+- **Description:** Set the confirmation status of a quote.
+- **Request Body:**
+  ```json
+  {
+    "confirmed": true // or false
+  }
+  ```
+- **Response (Success):**
+  ```json
+  {
+    "message": "Quote confirmation status updated successfully"
+  }
+  ```
+- **Response (Error):**
+  - `400 Bad Request` if `confirmed` is not a boolean.
+  - `404 Not Found` if the quote does not exist.
+  - `500 Internal Server Error` for other errors.
+
+---
+
+## 2. Set Quote Reminder Date
+
+- **Endpoint:** `PATCH /quotes/:id/reminder`
+- **Description:** Set or update the reminder date for a quote.
+- **Request Body:**
+  ```json
+  {
+    "reminderDate": "YYYY-MM-DD" // ISO date string
+  }
+  ```
+- **Response (Success):**
+  ```json
+  {
+    "id": "...",
+    "client_name": "...",
+    "site_name": "...",
+    "object": "...",
+    "date": "...",
+    "supply_description": "...",
+    "labor_description": "...",
+    "supply_exchange_rate": ...,
+    "supply_margin_rate": ...,
+    "labor_exchange_rate": ...,
+    "labor_margin_rate": ...,
+    "total_supplies_ht": ...,
+    "total_labor_ht": ...,
+    "total_ht": ...,
+    "tva": ...,
+    "total_ttc": ...,
+    "confirmed": ...,
+    "reminderDate": "YYYY-MM-DD",
+    "parentId": ...,
+    "created_at": "...",
+    "updated_at": "..."
+  }
+  ```
+- **Response (Error):**
+  - `400 Bad Request` if `reminderDate` is missing or invalid.
+  - `404 Not Found` if the quote does not exist.
+  - `500 Internal Server Error` for other errors.
+
+---
+
+## Notes for Frontend
+- Both endpoints require the quote `id` as a URL parameter.
+- Use the correct HTTP method (`PATCH`).
+- Set `Content-Type: application/json` in the request headers.
+- Handle error responses appropriately in the UI.
