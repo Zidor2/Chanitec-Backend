@@ -139,24 +139,28 @@ const setReminderDate = async (req, res) => {
 };
 
 const confirmQuote = async (req, res) => {
-    const { confirmed } = req.body;
+    const { confirmed, number_chanitec } = req.body;
 
     try {
         // Validate confirmed value
         if (typeof confirmed !== 'boolean') {
             return res.status(400).json({ error: 'Confirmed status must be a boolean' });
         }
+        // Validate number_chanitec (optional: you can add more validation)
+        if (!number_chanitec || typeof number_chanitec !== 'string') {
+            return res.status(400).json({ error: 'number_chanitec is required and must be a string' });
+        }
 
         const [result] = await pool.query(
-            'UPDATE quotes SET confirmed = ? WHERE id = ?',
-            [confirmed, req.params.id]
+            'UPDATE quotes SET confirmed = ?, number_chanitec = ? WHERE id = ?',
+            [confirmed, number_chanitec, req.params.id]
         );
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Quote not found' });
         }
 
-        res.json({ message: 'Quote confirmation status updated successfully' });
+        res.json({ message: 'Quote confirmation status and number_chanitec updated successfully' });
     } catch (error) {
         console.error('Error updating quote confirmation:', error);
         res.status(500).json({ error: 'Error updating quote confirmation' });
