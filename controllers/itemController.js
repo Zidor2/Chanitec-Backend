@@ -45,23 +45,23 @@ const getItemById = async (req, res) => {
 const createItem = async (req, res) => {
     console.log('Received create item request with body:', req.body);
 
-    const { description, price } = req.body;
-    console.log('Extracted values:', { description, price });
+    const { description, price, quantity } = req.body;
+    console.log('Extracted values:', { description, price, quantity });
 
-    if (!description || !price) {
-        console.log('Missing required fields. Received:', { description, price });
+    if (!description || !price || quantity === undefined) {
+        console.log('Missing required fields. Received:', { description, price, quantity });
         return res.status(400).json({
             error: 'Missing required fields',
-            required: ['description', 'price'],
+            required: ['description', 'price', 'quantity'],
             received: req.body
         });
     }
 
     try {
-        console.log('Attempting to insert item with values:', { description, price });
+        console.log('Attempting to insert item with values:', { description, price, quantity });
         const [result] = await pool.query(
-            'INSERT INTO items (id, description, price) VALUES (UUID(), ?, ?)',
-            [description, price]
+            'INSERT INTO items (id, description, price, quantity) VALUES (UUID(), ?, ?, ?)',
+            [description, price, quantity]
         );
         console.log('Insert result:', result);
 
@@ -88,19 +88,19 @@ const createItem = async (req, res) => {
 
 // Update item
 const updateItem = async (req, res) => {
-    const { description, price } = req.body;
+    const { description, price, quantity } = req.body;
 
-    if (!description || !price) {
+    if (!description || !price || quantity === undefined) {
         return res.status(400).json({
             error: 'Missing required fields',
-            required: ['description', 'price']
+            required: ['description', 'price', 'quantity']
         });
     }
 
     try {
         const [result] = await pool.query(
-            'UPDATE items SET description = ?, price = ? WHERE id = ?',
-            [description, price, req.params.id]
+            'UPDATE items SET description = ?, price = ?, quantity = ? WHERE id = ?',
+            [description, price, quantity, req.params.id]
         );
 
         if (result.affectedRows === 0) {
