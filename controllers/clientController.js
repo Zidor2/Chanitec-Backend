@@ -31,15 +31,15 @@ const getClientById = async (req, res) => {
 
 // Create new client
 const createClient = async (req, res) => {
-    const { name } = req.body;
+    const { name, Taux_change } = req.body;
     if (!name) {
         return res.status(400).json({ error: 'Name is required' });
     }
 
     try {
         const [result] = await pool.query(
-            'INSERT INTO clients (id, name) VALUES (UUID(), ?)',
-            [name]
+            'INSERT INTO clients (id, name, Taux_change) VALUES (UUID(), ?, ?)',
+            [name, Taux_change || null]
         );
 
         // Get the newly created client using UUID() generated
@@ -56,6 +56,7 @@ const createClient = async (req, res) => {
         const newClient = {
             id: rows[0].id,
             name: rows[0].name,
+            Taux_change: rows[0].Taux_change,
             created_at: rows[0].created_at,
             updated_at: rows[0].updated_at
         };
@@ -72,15 +73,15 @@ const createClient = async (req, res) => {
 
 // Update client
 const updateClient = async (req, res) => {
-    const { name } = req.body;
+    const { name, Taux_change } = req.body;
     if (!name) {
         return res.status(400).json({ error: 'Name is required' });
     }
 
     try {
         const [result] = await pool.query(
-            'UPDATE clients SET name = ? WHERE id = ?',
-            [name, req.params.id]
+            'UPDATE clients SET name = ?, Taux_change = ? WHERE id = ?',
+            [name, Taux_change || null, req.params.id]
         );
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Client not found' });
