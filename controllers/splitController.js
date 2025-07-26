@@ -1,8 +1,6 @@
 const pool = require('../database/pool');
 const Split = require('../models/splitModel');
 
-
-
 // Get all splits
 const getAllSplits = async (req, res) => {
     try {
@@ -84,11 +82,6 @@ const getSiteForSplit = async (req, res) => {
 };
 
 module.exports = {
-    getSiteById,
-    getSitesByClientId,
-    createSite,
-    updateSite,
-    deleteSite,
     getAllSplits,
     getSplitById,
     createSplit,
