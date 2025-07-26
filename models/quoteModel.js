@@ -19,7 +19,8 @@ class Quote {
         total_ht,
         tva,
         total_ttc,
-        parentId
+        parentId,
+        split_id
     }) {
         const [result] = await pool.query(
             `INSERT INTO quotes (
@@ -32,7 +33,7 @@ class Quote {
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate, parentId
+                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate, parentId,split_id
             ]
         );
         return this.findById(result.insertId);
@@ -66,7 +67,8 @@ class Quote {
         reminderDate,
         tva,
         total_ttc,
-        parentId
+        parentId,
+        split_id
     }) {
         await pool.query(
             `UPDATE quotes SET
@@ -75,13 +77,13 @@ class Quote {
                 supply_exchange_rate = ?, supply_margin_rate = ?,
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
-                tva = ?, total_ttc = ?, confirmed = ?, reminderDate = ?, parentId = ?
+                tva = ?, total_ttc = ?, confirmed = ?, reminderDate = ?, parentId = ? , split_id
             WHERE id = ?`,
             [
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate, parentId, id
+                total_labor_ht, total_ht, tva, total_ttc, confirmed, reminderDate, parentId,split_id,id
             ]
         );
         return this.findById(id);

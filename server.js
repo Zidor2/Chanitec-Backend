@@ -10,6 +10,7 @@ const sequelize = require('./database/database');
 const quoteRoutes = require('./routes/quoteRoutes');
 const departmentRoutes = require('./routes/departmentRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
+const splitRoutes = require('./routes/splitRoutes');
 
 const app = express();
 const port = process.env.PORT ;
@@ -44,6 +45,7 @@ app.use('/api/items', require('./routes/itemRoutes'));
 app.use('/api/debug', require('./routes/debugRoutes'));
 app.use('/api/departments', departmentRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/splits', splitRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

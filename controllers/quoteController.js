@@ -28,7 +28,8 @@ const getAllQuotes = async (req, res) => {
             totalTTC: row.total_ttc,
             parentId: row.parentId,
             createdAt: row.created_at,
-            updatedAt: row.updated_at
+            updatedAt: row.updated_at,
+            splitId: row.split_id,
         }));
 
         res.json(quotes);
@@ -81,6 +82,7 @@ const getQuoteById = async (req, res) => {
             parentId: quoteRows[0].parentId,
             createdAt: quoteRows[0].created_at,
             updatedAt: quoteRows[0].updated_at,
+            splitId: quoteRows[0].split_id,
             supplyItems: supplyItems.map(item => ({
                 id: item.id,
                 description: item.description,
@@ -209,7 +211,8 @@ const createQuote = async (req, res) => {
                 req.body.totalHT,
                 req.body.tva,
                 req.body.totalTTC,
-                req.body.parentId || 0
+                req.body.parentId || 0,
+                req.body.splitId || null
             ]
         );
 
@@ -238,7 +241,8 @@ const createQuote = async (req, res) => {
             total_ht: req.body.totalHT,
             tva: req.body.tva,
             total_ttc: req.body.totalTTC,
-            parentId: req.body.parentId || 0
+            parentId: req.body.parentId || 0,
+            split_id: req.body.splitId || null
         };
 
         // Generate quote ID
@@ -252,8 +256,8 @@ const createQuote = async (req, res) => {
                 supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate,
                 total_supplies_ht, total_labor_ht, total_ht,
-                tva, total_ttc, parentId
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                tva, total_ttc, parentId, split_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
             [
                 quoteId,
                 quoteData.client_name,
@@ -271,7 +275,8 @@ const createQuote = async (req, res) => {
                 quoteData.total_ht,
                 quoteData.tva,
                 quoteData.total_ttc,
-                quoteData.parentId || 0
+                quoteData.parentId || 0,
+                quoteData.split_id
             ]
         );
 
@@ -412,7 +417,8 @@ const updateQuote = async (req, res) => {
         total_ttc,
         confirmed,
         reminderDate,
-        parentId
+        parentId,
+        split_id // <-- Use split_id here
     } = req.body;
 
     // Validate required fields
@@ -431,13 +437,13 @@ const updateQuote = async (req, res) => {
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
                 tva = ?, total_ttc = ?, confirmed = ?, reminderDate = ?,
-                parentId = ?
+                parentId = ?, split_id = ?
             WHERE id = ?`,
             [
                 client_name, site_name, object, date, supply_description, labor_description,
                 supply_exchange_rate, supply_margin_rate, labor_exchange_rate, labor_margin_rate,
                 total_supplies_ht, total_labor_ht, total_ht, tva, total_ttc,
-                confirmed || false, reminderDate || null, parentId || null,
+                confirmed || false, reminderDate || null, parentId || null, split_id || null,
                 req.params.id
             ]
         );
