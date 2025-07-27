@@ -8,6 +8,6 @@ router.get('/:code', splitController.getSplitById);
 router.post('/', splitController.createSplit);
 router.put('/:code', splitController.updateSplit);
 router.delete('/:code', splitController.deleteSplit);
-router.get('/:code/site', splitController.getSiteForSplit);
+router.get('/by-site/:site_id', splitController.findBySiteId);
 
 module.exports = router;

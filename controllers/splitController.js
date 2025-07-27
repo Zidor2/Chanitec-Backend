@@ -68,16 +68,16 @@ const deleteSplit = async (req, res) => {
 };
 
 // Get site for split
-const getSiteForSplit = async (req, res) => {
+const findBySiteId = async (req, res) => {
     try {
-        const site = await Split.getSite(req.params.code);
-        if (!site) {
-            return res.status(404).json({ error: 'Site not found for this split' });
+        const splits = await Split.findBySiteId(req.params.site_id);
+        if (!splits) {
+            return res.status(404).json({ error: 'splits not found for this site' });
         }
-        res.json(site);
+        res.json(splits);
     } catch (error) {
-        console.error('Error fetching site for split:', error);
-        res.status(500).json({ error: 'Error fetching site for split' });
+        console.error('Error fetching splits for site:', error);
+        res.status(500).json({ error: 'Error fetching splits for site' });
     }
 };
 
@@ -87,5 +87,5 @@ module.exports = {
     createSplit,
     updateSplit,
     deleteSplit,
-    getSiteForSplit
+    findBySiteId
 };
