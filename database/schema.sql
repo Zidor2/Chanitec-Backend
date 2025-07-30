@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS quotes (
     total_ht DECIMAL(10, 2) NOT NULL,
     tva DECIMAL(10, 2) NOT NULL,
     total_ttc DECIMAL(10, 2) NOT NULL,
+    remise DECIMAL(10, 2) DEFAULT 0.00 COMMENT 'Discount/rebate amount applied to the quote',
     parentId INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
