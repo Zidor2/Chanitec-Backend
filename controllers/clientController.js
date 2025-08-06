@@ -1,9 +1,10 @@
 const { pool } = require('../database/pool');
+const { safeQuery } = require('../utils/databaseUtils');
 
 // Get all clients
 const getAllClients = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM clients');
+        const rows = await safeQuery('SELECT * FROM clients');
         res.json(rows);
     } catch (error) {
         console.error('Error fetching clients:', {
@@ -18,7 +19,7 @@ const getAllClients = async (req, res) => {
 // Get client by ID
 const getClientById = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM clients WHERE id = ?', [req.params.id]);
+        const rows = await safeQuery('SELECT * FROM clients WHERE id = ?', [req.params.id]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Client not found' });
         }
@@ -37,13 +38,13 @@ const createClient = async (req, res) => {
     }
 
     try {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             'INSERT INTO clients (id, name, Taux_marge) VALUES (UUID(), ?, ?)',
             [name, Taux_marge || null]
         );
 
         // Get the newly created client using UUID() generated
-        const [rows] = await pool.query(
+        const rows = await safeQuery(
             'SELECT * FROM clients WHERE name = ? ORDER BY created_at DESC LIMIT 1',
             [name]
         );
@@ -79,14 +80,14 @@ const updateClient = async (req, res) => {
     }
 
     try {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             'UPDATE clients SET name = ?, Taux_marge = ? WHERE id = ?',
             [name, Taux_marge || null, req.params.id]
         );
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Client not found' });
         }
-        const [updatedClient] = await pool.query('SELECT * FROM clients WHERE id = ?', [req.params.id]);
+        const updatedClient = await safeQuery('SELECT * FROM clients WHERE id = ?', [req.params.id]);
         res.json(updatedClient[0]);
     } catch (error) {
         console.error('Error updating client:', error);
@@ -97,7 +98,7 @@ const updateClient = async (req, res) => {
 // Delete client
 const deleteClient = async (req, res) => {
     try {
-        const [result] = await pool.query('DELETE FROM clients WHERE id = ?', [req.params.id]);
+        const result = await safeQuery('DELETE FROM clients WHERE id = ?', [req.params.id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Client not found' });
         }

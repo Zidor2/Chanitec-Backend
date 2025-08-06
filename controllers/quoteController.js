@@ -1,10 +1,11 @@
 const { pool } = require('../database/pool');
+const { safeQuery } = require('../utils/databaseUtils');
 const crypto = require('crypto');
 
 // Get all quotes
 const getAllQuotes = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM quotes ORDER BY date DESC, created_at DESC');
+        const rows = await safeQuery('SELECT * FROM quotes ORDER BY date DESC, created_at DESC');
 
         // Convert field names from snake_case to camelCase for frontend
         const quotes = rows.map(row => ({
@@ -44,20 +45,20 @@ const getAllQuotes = async (req, res) => {
 const getQuoteById = async (req, res) => {
     try {
         // Get the quote
-        const [quoteRows] = await pool.query('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
+        const quoteRows = await safeQuery('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
 
         if (quoteRows.length === 0) {
             return res.status(404).json({ error: 'Quote not found' });
         }
 
         // Get supply items for this quote
-        const [supplyItems] = await pool.query(
+        const supplyItems = await safeQuery(
             'SELECT * FROM supply_items WHERE quote_id = ?',
             [req.params.id]
         );
 
         // Get labor items for this quote
-        const [laborItems] = await pool.query(
+        const laborItems = await safeQuery(
             'SELECT * FROM labor_items WHERE quote_id = ?',
             [req.params.id]
         );
@@ -124,7 +125,7 @@ const setReminderDate = async (req, res) => {
             return res.status(400).json({ error: 'Invalid reminder date format' });
         }
 
-        const [result] = await pool.query(
+        const result = await safeQuery(
             'UPDATE quotes SET reminderDate = ? WHERE id = ?',
             [reminderDate, req.params.id]
         );
@@ -134,7 +135,7 @@ const setReminderDate = async (req, res) => {
         }
 
         // Return the updated quote
-        const [updatedQuote] = await pool.query('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
+        const updatedQuote = await safeQuery('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
         res.json(updatedQuote[0]);
     } catch (error) {
         console.error('Error setting reminder date:', error);
@@ -155,7 +156,7 @@ const confirmQuote = async (req, res) => {
             return res.status(400).json({ error: 'number_chanitec is required and must be a string' });
         }
 
-        const [result] = await pool.query(
+        const result = await safeQuery(
             'UPDATE quotes SET confirmed = ?, number_chanitec = ? WHERE id = ?',
             [confirmed, number_chanitec, req.params.id]
         );
@@ -435,7 +436,7 @@ const updateQuote = async (req, res) => {
     }
 
     try {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             `UPDATE quotes SET
                 client_name = ?, site_name = ?, object = ?, date = ?,
                 supply_description = ?, labor_description = ?,
@@ -456,7 +457,7 @@ const updateQuote = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Quote not found' });
         }
-        const [updatedQuote] = await pool.query('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
+        const updatedQuote = await safeQuery('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
         res.json(updatedQuote[0]);
     } catch (error) {
         console.error('Error updating quote:', error);
@@ -467,7 +468,7 @@ const updateQuote = async (req, res) => {
 // Delete quote
 const deleteQuote = async (req, res) => {
     try {
-        const [result] = await pool.query('DELETE FROM quotes WHERE id = ?', [req.params.id]);
+        const result = await safeQuery('DELETE FROM quotes WHERE id = ?', [req.params.id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Quote not found' });
         }

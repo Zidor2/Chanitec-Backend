@@ -1,4 +1,5 @@
 const { pool } = require('../database/pool');
+const { safeQuery } = require('../utils/databaseUtils');
 
 class Quote {
     static async create({
@@ -23,7 +24,7 @@ class Quote {
         parentId,
         split_id
     }) {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             `INSERT INTO quotes (
                 id, client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
@@ -41,12 +42,12 @@ class Quote {
     }
 
     static async findById(id) {
-        const [rows] = await pool.query('SELECT * FROM quotes WHERE id = ?', [id]);
+        const rows = await safeQuery('SELECT * FROM quotes WHERE id = ?', [id]);
         return rows[0];
     }
 
     static async findAll() {
-        const [rows] = await pool.query('SELECT * FROM quotes');
+        const rows = await safeQuery('SELECT * FROM quotes');
         return rows;
     }
 
@@ -72,7 +73,7 @@ class Quote {
         parentId,
         split_id
     }) {
-        await pool.query(
+        await safeQuery(
             `UPDATE quotes SET
                 client_name = ?, site_name = ?, object = ?, date = ?,
                 supply_description = ?, labor_description = ?,
@@ -92,16 +93,16 @@ class Quote {
     }
 
     static async delete(id) {
-        await pool.query('DELETE FROM quotes WHERE id = ?', [id]);
+        await safeQuery('DELETE FROM quotes WHERE id = ?', [id]);
     }
 
     static async getSupplyItems(quoteId) {
-        const [rows] = await pool.query('SELECT * FROM supply_items WHERE quote_id = ?', [quoteId]);
+        const rows = await safeQuery('SELECT * FROM supply_items WHERE quote_id = ?', [quoteId]);
         return rows;
     }
 
     static async getLaborItems(quoteId) {
-        const [rows] = await pool.query('SELECT * FROM labor_items WHERE quote_id = ?', [quoteId]);
+        const rows = await safeQuery('SELECT * FROM labor_items WHERE quote_id = ?', [quoteId]);
         return rows;
     }
 }

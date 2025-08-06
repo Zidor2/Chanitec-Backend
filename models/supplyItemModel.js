@@ -1,4 +1,5 @@
 const { pool } = require('../database/pool');
+const { safeQuery } = require('../utils/databaseUtils');
 
 class SupplyItem {
     static async create({
@@ -10,7 +11,7 @@ class SupplyItem {
         unit_price_dollar,
         total_price_dollar
     }) {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             `INSERT INTO supply_items (
                 id, quote_id, description, quantity, price_euro,
                 price_dollar, unit_price_dollar, total_price_dollar
@@ -24,12 +25,12 @@ class SupplyItem {
     }
 
     static async findById(id) {
-        const [rows] = await pool.query('SELECT * FROM supply_items WHERE id = ?', [id]);
+        const rows = await safeQuery('SELECT * FROM supply_items WHERE id = ?', [id]);
         return rows[0];
     }
 
     static async findByQuoteId(quoteId) {
-        const [rows] = await pool.query('SELECT * FROM supply_items WHERE quote_id = ?', [quoteId]);
+        const rows = await safeQuery('SELECT * FROM supply_items WHERE quote_id = ?', [quoteId]);
         return rows;
     }
 
@@ -41,7 +42,7 @@ class SupplyItem {
         unit_price_dollar,
         total_price_dollar
     }) {
-        await pool.query(
+        await safeQuery(
             `UPDATE supply_items SET
                 description = ?, quantity = ?, price_euro = ?,
                 price_dollar = ?, unit_price_dollar = ?, total_price_dollar = ?
@@ -55,11 +56,11 @@ class SupplyItem {
     }
 
     static async delete(id) {
-        await pool.query('DELETE FROM supply_items WHERE id = ?', [id]);
+        await safeQuery('DELETE FROM supply_items WHERE id = ?', [id]);
     }
 
     static async getQuote(supplyItemId) {
-        const [rows] = await pool.query(
+        const rows = await safeQuery(
             'SELECT q.* FROM quotes q JOIN supply_items s ON q.id = s.quote_id WHERE s.id = ?',
             [supplyItemId]
         );

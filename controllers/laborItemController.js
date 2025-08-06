@@ -1,9 +1,10 @@
 const { pool } = require('../database/pool');
+const { safeQuery } = require('../utils/databaseUtils');
 
 // Get all labor items for a quote
 const getLaborItemsByQuoteId = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM labor_items WHERE quote_id = ?', [req.params.quoteId]);
+        const rows = await safeQuery('SELECT * FROM labor_items WHERE quote_id = ?', [req.params.quoteId]);
         res.json(rows);
     } catch (error) {
         console.error('Error fetching labor items:', error);
@@ -14,7 +15,7 @@ const getLaborItemsByQuoteId = async (req, res) => {
 // Get labor item by ID
 const getLaborItemById = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM labor_items WHERE id = ?', [req.params.id]);
+        const rows = await safeQuery('SELECT * FROM labor_items WHERE id = ?', [req.params.id]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Labor item not found' });
         }
@@ -87,7 +88,7 @@ const createLaborItem = async (req, res) => {
         }
 
         // Insert the labor item with UUID generation
-        const [result] = await pool.query(
+        const result = await safeQuery(
             `INSERT INTO labor_items (
                 id, quote_id, description, nb_technicians, nb_hours,
                 weekend_multiplier, price_euro, price_dollar,
@@ -107,7 +108,7 @@ const createLaborItem = async (req, res) => {
         );
 
         // Fetch the newly created item
-        const [rows] = await pool.query(
+        const rows = await safeQuery(
             'SELECT * FROM labor_items WHERE quote_id = ? AND description = ? ORDER BY created_at DESC LIMIT 1',
             [quote_id, validatedData.description]
         );
@@ -159,7 +160,7 @@ const updateLaborItem = async (req, res) => {
     }
 
     try {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             `UPDATE labor_items SET
                 description = ?, nb_technicians = ?, nb_hours = ?,
                 weekend_multiplier = ?, price_euro = ?, price_dollar = ?,
@@ -174,7 +175,7 @@ const updateLaborItem = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Labor item not found' });
         }
-        const [updatedItem] = await pool.query('SELECT * FROM labor_items WHERE id = ?', [req.params.id]);
+        const updatedItem = await safeQuery('SELECT * FROM labor_items WHERE id = ?', [req.params.id]);
         res.json(updatedItem[0]);
     } catch (error) {
         console.error('Error updating labor item:', error);
@@ -185,7 +186,7 @@ const updateLaborItem = async (req, res) => {
 // Delete labor item
 const deleteLaborItem = async (req, res) => {
     try {
-        const [result] = await pool.query('DELETE FROM labor_items WHERE id = ?', [req.params.id]);
+        const result = await safeQuery('DELETE FROM labor_items WHERE id = ?', [req.params.id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Labor item not found' });
         }

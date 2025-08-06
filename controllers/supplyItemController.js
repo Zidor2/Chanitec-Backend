@@ -1,9 +1,10 @@
 const { pool } = require('../database/pool');
+const { safeQuery } = require('../utils/databaseUtils');
 
 // Get all supply items for a quote
 const getSupplyItemsByQuoteId = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM supply_items WHERE quote_id = ?', [req.params.quoteId]);
+        const rows = await safeQuery('SELECT * FROM supply_items WHERE quote_id = ?', [req.params.quoteId]);
         res.json(rows);
     } catch (error) {
         console.error('Error fetching supply items:', error);
@@ -14,7 +15,7 @@ const getSupplyItemsByQuoteId = async (req, res) => {
 // Get supply item by ID
 const getSupplyItemById = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM supply_items WHERE id = ?', [req.params.id]);
+        const rows = await safeQuery('SELECT * FROM supply_items WHERE id = ?', [req.params.id]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Supply item not found' });
         }
@@ -47,7 +48,7 @@ const createSupplyItem = async (req, res) => {
     }
 
     try {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             `INSERT INTO supply_items (
                 id, quote_id, description, quantity, price_euro,
                 price_dollar, unit_price_dollar, total_price_dollar
@@ -56,7 +57,7 @@ const createSupplyItem = async (req, res) => {
         );
 
         // Get the newly created item using description and quote_id
-        const [rows] = await pool.query(
+        const rows = await safeQuery(
             'SELECT * FROM supply_items WHERE quote_id = ? AND description = ? ORDER BY created_at DESC LIMIT 1',
             [quote_id, description]
         );
@@ -101,7 +102,7 @@ const updateSupplyItem = async (req, res) => {
     }
 
     try {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             `UPDATE supply_items SET
                 description = ?, quantity = ?, price_euro = ?,
                 price_dollar = ?, unit_price_dollar = ?, total_price_dollar = ?
@@ -111,7 +112,7 @@ const updateSupplyItem = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Supply item not found' });
         }
-        const [updatedItem] = await pool.query('SELECT * FROM supply_items WHERE id = ?', [req.params.id]);
+        const updatedItem = await safeQuery('SELECT * FROM supply_items WHERE id = ?', [req.params.id]);
         res.json(updatedItem[0]);
     } catch (error) {
         console.error('Error updating supply item:', error);
@@ -122,7 +123,7 @@ const updateSupplyItem = async (req, res) => {
 // Delete supply item
 const deleteSupplyItem = async (req, res) => {
     try {
-        const [result] = await pool.query('DELETE FROM supply_items WHERE id = ?', [req.params.id]);
+        const result = await safeQuery('DELETE FROM supply_items WHERE id = ?', [req.params.id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Supply item not found' });
         }

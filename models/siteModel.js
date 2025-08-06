@@ -1,8 +1,9 @@
 const { pool } = require('../database/pool');
+const { safeQuery } = require('../utils/databaseUtils');
 
 class Site {
     static async create({ name, address, client_id }) {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             'INSERT INTO sites (id, name, client_id) VALUES (UUID(), ?, ?)',
             [name,  client_id]
         );
@@ -10,22 +11,22 @@ class Site {
     }
 
     static async findById(id) {
-        const [rows] = await pool.query('SELECT * FROM sites WHERE id = ?', [id]);
+        const rows = await safeQuery('SELECT * FROM sites WHERE id = ?', [id]);
         return rows[0];
     }
 
     static async findAll() {
-        const [rows] = await pool.query('SELECT * FROM sites');
+        const rows = await safeQuery('SELECT * FROM sites');
         return rows;
     }
 
     static async findByClientId(clientId) {
-        const [rows] = await pool.query('SELECT * FROM sites WHERE client_id = ?', [clientId]);
+        const rows = await safeQuery('SELECT * FROM sites WHERE client_id = ?', [clientId]);
         return rows;
     }
 
     static async update(id, { name, address, client_id }) {
-        await pool.query(
+        await safeQuery(
             'UPDATE sites SET name = ?, address = ?, client_id = ? WHERE id = ?',
             [name, address, client_id, id]
         );
@@ -33,11 +34,11 @@ class Site {
     }
 
     static async delete(id) {
-        await pool.query('DELETE FROM sites WHERE id = ?', [id]);
+        await safeQuery('DELETE FROM sites WHERE id = ?', [id]);
     }
 
     static async getClient(siteId) {
-        const [rows] = await pool.query(
+        const rows = await safeQuery(
             'SELECT c.* FROM clients c JOIN sites s ON c.id = s.client_id WHERE s.id = ?',
             [siteId]
         );

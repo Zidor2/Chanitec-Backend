@@ -1,4 +1,5 @@
 const { pool } = require('../database/pool');
+const { safeQuery } = require('../utils/databaseUtils');
 
 class LaborItem {
     static async create({
@@ -12,7 +13,7 @@ class LaborItem {
         unit_price_dollar,
         total_price_dollar
     }) {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             `INSERT INTO labor_items (
                 id, quote_id, description, nb_technicians, nb_hours,
                 weekend_multiplier, price_euro, price_dollar,
@@ -28,12 +29,12 @@ class LaborItem {
     }
 
     static async findById(id) {
-        const [rows] = await pool.query('SELECT * FROM labor_items WHERE id = ?', [id]);
+        const rows = await safeQuery('SELECT * FROM labor_items WHERE id = ?', [id]);
         return rows[0];
     }
 
     static async findByQuoteId(quoteId) {
-        const [rows] = await pool.query('SELECT * FROM labor_items WHERE quote_id = ?', [quoteId]);
+        const rows = await safeQuery('SELECT * FROM labor_items WHERE quote_id = ?', [quoteId]);
         return rows;
     }
 
@@ -47,7 +48,7 @@ class LaborItem {
         unit_price_dollar,
         total_price_dollar
     }) {
-        await pool.query(
+        await safeQuery(
             `UPDATE labor_items SET
                 description = ?, nb_technicians = ?, nb_hours = ?,
                 weekend_multiplier = ?, price_euro = ?, price_dollar = ?,
@@ -63,11 +64,11 @@ class LaborItem {
     }
 
     static async delete(id) {
-        await pool.query('DELETE FROM labor_items WHERE id = ?', [id]);
+        await safeQuery('DELETE FROM labor_items WHERE id = ?', [id]);
     }
 
     static async getQuote(laborItemId) {
-        const [rows] = await pool.query(
+        const rows = await safeQuery(
             'SELECT q.* FROM quotes q JOIN labor_items l ON q.id = l.quote_id WHERE l.id = ?',
             [laborItemId]
         );

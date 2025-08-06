@@ -1,8 +1,9 @@
 const { pool } = require('../database/pool');
+const { safeQuery } = require('../utils/databaseUtils');
 
 class Employee {
     static async create({ full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description }) {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             'INSERT INTO employee (full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description]
         );
@@ -10,17 +11,17 @@ class Employee {
     }
 
     static async findById(id) {
-        const [rows] = await pool.query('SELECT * FROM employee WHERE id = ?', [id]);
+        const rows = await safeQuery('SELECT * FROM employee WHERE id = ?', [id]);
         return rows[0];
     }
 
     static async findAll() {
-        const [rows] = await pool.query('SELECT * FROM employee');
+        const rows = await safeQuery('SELECT * FROM employee');
         return rows;
     }
 
     static async update(id, { full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description }) {
-        await pool.query(
+        await safeQuery(
             'UPDATE employee SET full_name = ?, civil_status = ?, birth_date = ?, entry_date = ?, seniority = ?, contract_type = ?, job_title = ?, fonction = ?, sub_type_id = ?, type_description = ? WHERE id = ?',
             [full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description, id]
         );
@@ -28,7 +29,7 @@ class Employee {
     }
 
     static async delete(id) {
-        await pool.query('DELETE FROM employee WHERE id = ?', [id]);
+        await safeQuery('DELETE FROM employee WHERE id = ?', [id]);
     }
 }
 
