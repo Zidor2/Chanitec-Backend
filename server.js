@@ -11,7 +11,8 @@ const employeeRoutes = require('./routes/employeeRoutes');
 const splitRoutes = require('./routes/splitRoutes');
 
 const app = express();
-const port = process.env.PORT ;
+const port = 5000; // Force port 5000 for local development
+console.log('🔥 Server PORT:', port);
 
 const allowedOrigins = [
     process.env.FRONTEND_URL,

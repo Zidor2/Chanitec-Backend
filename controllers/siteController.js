@@ -1,9 +1,10 @@
 const { pool } = require('../database/pool');
+const { safeQuery } = require('../utils/databaseUtils');
 
 // Get site by ID
 const getSiteById = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM sites WHERE id = ?', [req.params.id]);
+        const rows = await safeQuery('SELECT * FROM sites WHERE id = ?', [req.params.id]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Site not found' });
         }
@@ -16,21 +17,32 @@ const getSiteById = async (req, res) => {
 
 // Get sites by client ID
 const getSitesByClientId = async (req, res) => {
-    const client_id = req.query.clientId;
+    console.log('🔍 Request query:', req.query);
+    console.log('🔍 Request params:', req.params);
+
+    const client_id = req.query.clientId || req.params.clientId;
 
     if (!client_id) {
         return res.status(400).json({ error: 'Client ID is required' });
     }
 
-    try {
+    console.log('🔍 Looking for client_id:', client_id);
+
+        try {
         // First check if the client exists
-        const [clientRows] = await pool.query('SELECT * FROM clients WHERE id = ?', [client_id]);
+        if (!client_id || client_id === 'undefined' || client_id === 'null') {
+            return res.status(400).json({ error: 'Invalid client ID provided' });
+        }
+
+        console.log('🔍 Executing client query with client_id:', client_id);
+        const clientRows = await safeQuery('SELECT * FROM clients WHERE id = ?', [client_id]);
 
         if (clientRows.length === 0) {
             return res.status(404).json({ error: 'Client not found with ID: ' + client_id });
         }
 
-        const [rows] = await pool.query('SELECT * FROM sites WHERE client_id = ?', [client_id]);
+        console.log('🔍 Executing sites query with client_id:', client_id);
+        const rows = await safeQuery('SELECT * FROM sites WHERE client_id = ?', [client_id]);
         res.json(rows);
     } catch (error) {
         console.error('Error fetching sites by client:', error);
@@ -47,14 +59,14 @@ const createSite = async (req, res) => {
 
     try {
         // Perform the insertion
-        const [result] = await pool.query(
+        const result = await safeQuery(
             'INSERT INTO sites (id, name, client_id) VALUES (UUID(), ?, ?)',
             [name, client_id]
         );
 
         // Retrieve the newly created site using the known name and client_id
         // Order by created_at descending and limit 1 to get the most recent one
-        const [rows] = await pool.query(
+        const rows = await safeQuery(
             'SELECT * FROM sites WHERE name = ? AND client_id = ? ORDER BY created_at DESC LIMIT 1',
             [name, client_id]
         );
@@ -84,14 +96,14 @@ const updateSite = async (req, res) => {
     }
 
     try {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             'UPDATE sites SET name = ? WHERE id = ?',
             [name, req.params.id]
         );
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Site not found' });
         }
-        const [updatedSite] = await pool.query('SELECT * FROM sites WHERE id = ?', [req.params.id]);
+        const updatedSite = await safeQuery('SELECT * FROM sites WHERE id = ?', [req.params.id]);
         res.json(updatedSite[0]);
     } catch (error) {
         console.error('Error updating site:', error);
@@ -102,7 +114,7 @@ const updateSite = async (req, res) => {
 // Delete site
 const deleteSite = async (req, res) => {
     try {
-        const [result] = await pool.query('DELETE FROM sites WHERE id = ?', [req.params.id]);
+        const result = await safeQuery('DELETE FROM sites WHERE id = ?', [req.params.id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Site not found' });
         }
