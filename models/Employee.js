@@ -1,4 +1,4 @@
-const pool = require('../database/pool');
+const { pool } = require('../database/pool');
 
 class Employee {
     static async create({ full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction, sub_type_id, type_description }) {

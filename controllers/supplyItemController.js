@@ -1,4 +1,4 @@
-const pool = require('../database/pool');
+const { pool } = require('../database/pool');
 
 // Get all supply items for a quote
 const getSupplyItemsByQuoteId = async (req, res) => {

@@ -1,4 +1,4 @@
-const pool = require('../database/pool');
+const { pool } = require('../database/pool');
 
 // Get database tables and structure information
 const getDatabaseStructure = async (req, res) => {

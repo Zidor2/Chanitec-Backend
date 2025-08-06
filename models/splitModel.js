@@ -1,4 +1,4 @@
-const pool = require('../database/pool');
+const { pool } = require('../database/pool');
 
 class Split {
     static async create({ code, name, description, puissance, site_id }) {

@@ -5,10 +5,8 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
-const pool = require('./database/pool');
-const sequelize = require('./database/database');
+const { pool, healthCheck } = require('./database/pool');
 const quoteRoutes = require('./routes/quoteRoutes');
-const departmentRoutes = require('./routes/departmentRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const splitRoutes = require('./routes/splitRoutes');
 
@@ -43,7 +41,7 @@ app.use('/api/supply-items', require('./routes/supplyItemRoutes'));
 app.use('/api/labor-items', require('./routes/laborItemRoutes'));
 app.use('/api/items', require('./routes/itemRoutes'));
 app.use('/api/debug', require('./routes/debugRoutes'));
-app.use('/api/departments', departmentRoutes);
+
 app.use('/api/employees', employeeRoutes);
 app.use('/api/splits', splitRoutes);
 
@@ -69,7 +67,7 @@ app.get('/api', (req, res) => {
             laborItems: '/api/labor-items',
             items: '/api/items',
             debug: '/api/debug',
-            departments: '/api/departments',
+
             employees: '/api/employees'
         }
     });
@@ -80,9 +78,6 @@ app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
 });
-app.get('/api/health', (req, res) => {
-    res.status(200).send('OK');
-  });
 
 // 404 handler
 app.use((req, res) => {
@@ -90,20 +85,47 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 
-// Sync database and start server
-sequelize.sync({ alter: true })
-    .then(() => {
-        console.log('✅ Database synced successfully');
-        // Start server
-        app.listen(port, () => {
-            console.log(`Server is running on port ${port}`);
-            console.log(`API available at= ${process.env.DB_HOST}:${port}`);
+// Health check endpoint
+app.get('/api/health', async (req, res) => {
+    try {
+        const isHealthy = await healthCheck();
+        const stats = require('./database/pool').getConnectionStats();
+
+        res.status(isHealthy ? 200 : 503).json({
+            status: isHealthy ? 'healthy' : 'unhealthy',
+            database: isHealthy ? 'connected' : 'disconnected',
+            timestamp: new Date().toISOString(),
+            connectionStats: stats
         });
+    } catch (error) {
+        console.error('Health check error:', error);
+        res.status(503).json({
+            status: 'unhealthy',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+// Start server
+const startServer = async () => {
+    try {
+        // Test database connection before starting
+        const isHealthy = await healthCheck();
+        if (!isHealthy) {
+            console.error('❌ Database connection failed. Server will not start.');
+            process.exit(1);
+        }
 
         app.listen(port, "0.0.0.0", () => {
             console.log(`✅ Server running on port ${port}`);
+            console.log(`🌐 API available at http://localhost:${port}`);
+            console.log(`🔍 Health check: http://localhost:${port}/api/health`);
         });
-    })
-    .catch(err => {
-        console.error('❌ Unable to sync database:', err);
-    });
+    } catch (error) {
+        console.error('❌ Failed to start server:', error);
+        process.exit(1);
+    }
+};
+
+startServer();

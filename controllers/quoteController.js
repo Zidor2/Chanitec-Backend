@@ -1,4 +1,4 @@
-const pool = require('../database/pool');
+const { pool } = require('../database/pool');
 const crypto = require('crypto');
 
 // Get all quotes

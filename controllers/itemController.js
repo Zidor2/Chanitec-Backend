@@ -1,10 +1,11 @@
-const pool = require('../database/pool');
+const { pool } = require('../database/pool');
 const { processExcelFile } = require('../utils/excelProcessor');
+const { safeQuery, withTransaction } = require('../utils/databaseUtils');
 
 // Get all items
 const getAllItems = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM items ORDER BY created_at DESC');
+        const rows = await safeQuery('SELECT * FROM items ORDER BY created_at DESC');
 
         // Add debug logging to see what fields are present
         if (rows.length > 0) {
@@ -27,7 +28,7 @@ const getAllItems = async (req, res) => {
 // Get item by ID
 const getItemById = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM items WHERE id = ?', [req.params.id]);
+        const rows = await safeQuery('SELECT * FROM items WHERE id = ?', [req.params.id]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Item not found' });
         }
@@ -73,17 +74,17 @@ const createItem = async (req, res) => {
         }
 
         console.log('Attempting to insert item with query:', query, 'and params:', params);
-        const [result] = await pool.query(query, params);
+        const result = await safeQuery(query, params);
         console.log('Insert result:', result);
 
         // Get the newly created item
         let rows;
         if (id) {
             // If custom ID was used, retrieve by that ID
-            [rows] = await pool.query('SELECT * FROM items WHERE id = ?', [id]);
+            rows = await safeQuery('SELECT * FROM items WHERE id = ?', [id]);
         } else {
             // If UUID was generated, retrieve by description and most recent
-            [rows] = await pool.query(
+            rows = await safeQuery(
                 'SELECT * FROM items WHERE description = ? ORDER BY created_at DESC LIMIT 1',
                 [description]
             );
@@ -116,7 +117,7 @@ const updateItem = async (req, res) => {
     }
 
     try {
-        const [result] = await pool.query(
+        const result = await safeQuery(
             'UPDATE items SET description = ?, price = ?, quantity = ? WHERE id = ?',
             [description, price, quantity, req.params.id]
         );
@@ -126,7 +127,7 @@ const updateItem = async (req, res) => {
         }
 
         // Get the updated item
-        const [rows] = await pool.query('SELECT * FROM items WHERE id = ?', [req.params.id]);
+        const rows = await safeQuery('SELECT * FROM items WHERE id = ?', [req.params.id]);
         res.json(rows[0]);
     } catch (error) {
         console.error('Error updating item:', error);
@@ -140,7 +141,7 @@ const updateItem = async (req, res) => {
 // Delete item
 const deleteItem = async (req, res) => {
     try {
-        const [result] = await pool.query('DELETE FROM items WHERE id = ?', [req.params.id]);
+        const result = await safeQuery('DELETE FROM items WHERE id = ?', [req.params.id]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Item not found' });
@@ -183,14 +184,20 @@ const importItems = async (req, res) => {
         // Process valid items one by one
         for (const validItem of processResult.validItems) {
             try {
-                const newItem = await pool.query(
-                    'INSERT INTO items (description, price) VALUES ($1, $2) RETURNING *',
+                const result = await safeQuery(
+                    'INSERT INTO items (id, description, price) VALUES (UUID(), ?, ?)',
                     [validItem.item.description, validItem.item.price]
+                );
+
+                // Get the newly created item
+                const rows = await safeQuery(
+                    'SELECT * FROM items WHERE description = ? ORDER BY created_at DESC LIMIT 1',
+                    [validItem.item.description]
                 );
 
                 results.successful.push({
                     rowIndex: validItem.rowIndex,
-                    item: newItem.rows[0],
+                    item: rows[0],
                     rawData: validItem.rawData
                 });
                 results.summary.imported++;
@@ -219,8 +226,8 @@ const importItems = async (req, res) => {
 
 // Clear all items
 const clearItems = async (req, res) => {
-    try {
-        const [result] = await pool.query('DELETE FROM items');
+        try {
+        const result = await safeQuery('DELETE FROM items');
         res.json({
             message: 'All items cleared successfully',
             deletedCount: result.affectedRows

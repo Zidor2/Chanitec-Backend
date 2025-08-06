@@ -16,11 +16,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Import routes
-const departmentRoutes = require('./routes/departmentRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 
 // Use routes
-app.use('/api/departments', departmentRoutes);
 app.use('/api/employees', employeeRoutes);
 
 module.exports = app;

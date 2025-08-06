@@ -1,4 +1,3 @@
-const pool = require('../database/pool');
 const Split = require('../models/splitModel');
 
 // Get all splits
