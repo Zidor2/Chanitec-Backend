@@ -16,9 +16,13 @@ const app = express();
 const port = process.env.PORT ;
 
 const allowedOrigins = [
-    process.env.FRONTEND_URL,
+    ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : []),
+    ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
     'http://localhost:3000'  // Add localhost for development
 ]
+
+// Debug: Log allowed origins
+console.log('🌐 Allowed CORS origins:', allowedOrigins);
 // Middleware
 app.use(cors({
   origin: allowedOrigins,
