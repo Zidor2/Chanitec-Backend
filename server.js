@@ -15,7 +15,8 @@ const port = 5000; // Force port 5000 for local development
 console.log('🔥 Server PORT:', port);
 
 const allowedOrigins = [
-    process.env.FRONTEND_URL,
+    ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : []),
+    ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
     'http://localhost:3000'  // Add localhost for development
 ]
 // Middleware
