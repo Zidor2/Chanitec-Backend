@@ -3,6 +3,7 @@ const router = express.Router();
 const debugController = require('../controllers/debugController');
 
 // Debug routes
+router.get('/', debugController.getDebugInfo);
 router.get('/database-structure', debugController.getDatabaseStructure);
 router.get('/test-site-lookup/:clientId', debugController.testSiteLookup);
 

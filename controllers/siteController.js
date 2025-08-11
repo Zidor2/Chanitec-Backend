@@ -1,5 +1,16 @@
 const pool = require('../database/pool');
 
+// Get all sites
+const getAllSites = async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM sites ORDER BY created_at DESC');
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching sites:', error);
+        res.status(500).json({ error: 'Error fetching sites' });
+    }
+};
+
 // Get site by ID
 const getSiteById = async (req, res) => {
     try {
@@ -114,6 +125,7 @@ const deleteSite = async (req, res) => {
 };
 
 module.exports = {
+    getAllSites,
     getSiteById,
     getSitesByClientId,
     createSite,

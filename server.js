@@ -56,11 +56,6 @@ app.get('/', (req, res) => {
     res.json({ message: 'Welcome to Chanitec API' });
 });
 
-app.use((req, res, next) => {
-    console.log('Received request:', req.originalUrl);
-    next();
-  });
-
 // API info route
 app.get('/api', (req, res) => {
     res.json({
@@ -79,14 +74,53 @@ app.get('/api', (req, res) => {
     });
 });
 
+// Health endpoints
+app.get('/api/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+app.get('/api/db-health', async (req, res) => {
+    try {
+        const pool = require('./database/pool');
+        const [result] = await pool.query('SELECT 1 as health_check');
+
+        // Get pool status safely
+        const poolStatus = pool.pool;
+        const total = poolStatus ? poolStatus.length || 0 : 0;
+        const used = poolStatus ? (poolStatus.numUsed ? poolStatus.numUsed() : 0) : 0;
+        const idle = total - used;
+
+        res.json({
+            status: 'healthy',
+            database: 'connected',
+            timestamp: new Date().toISOString(),
+            pool: {
+                total: total,
+                idle: idle,
+                used: used
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'unhealthy',
+            database: 'disconnected',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+// Debug middleware
+app.use((req, res, next) => {
+    console.log('Received request:', req.originalUrl);
+    next();
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
 });
-app.get('/api/health', (req, res) => {
-    res.status(200).send('OK');
-  });
 
 // 404 handler
 app.use((req, res) => {
@@ -99,14 +133,35 @@ sequelize.sync({ alter: true })
     .then(() => {
         console.log('✅ Database synced successfully');
         // Start server
-        app.listen(port, () => {
-            console.log(`Server is running on port ${port}`);
-            console.log(`API available at= ${process.env.DB_HOST}:${port}`);
+        const server = app.listen(port, "0.0.0.0", () => {
+            console.log(`✅ Server running on port ${port}`);
+            console.log(`API available at ${process.env.DB_HOST}:${port}`);
         });
 
-        app.listen(port, "0.0.0.0", () => {
-            console.log(`✅ Server running on port ${port}`);
-        });
+        // Graceful shutdown handling
+        const gracefulShutdown = async (signal) => {
+            console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+
+            server.close(async () => {
+                console.log('✅ HTTP server closed');
+
+                try {
+                    // Close database connections
+                    const pool = require('./database/pool');
+                    await pool.end();
+                    console.log('✅ Database connections closed');
+
+                    process.exit(0);
+                } catch (error) {
+                    console.error('❌ Error during shutdown:', error);
+                    process.exit(1);
+                }
+            });
+        };
+
+        // Handle shutdown signals
+        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
     })
     .catch(err => {
         console.error('❌ Unable to sync database:', err);

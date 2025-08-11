@@ -173,11 +173,11 @@ const confirmQuote = async (req, res) => {
 
 // Create new quote
 const createQuote = async (req, res) => {
-    // Start a transaction
-    const connection = await pool.getConnection();
-    await connection.beginTransaction();
-
+    let connection;
     try {
+        // Start a transaction
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
         // 1. Check for duplicate quote
         const [existingQuotes] = await connection.query(
             `SELECT id FROM quotes WHERE
@@ -220,6 +220,7 @@ const createQuote = async (req, res) => {
 
         if (existingQuotes.length > 0) {
             await connection.rollback();
+            connection.release();
             return res.status(400).json({
                 error: 'A quote with these exact details already exists',
                 existingQuoteId: existingQuotes[0].id
@@ -243,7 +244,7 @@ const createQuote = async (req, res) => {
             total_ht: req.body.totalHT,
             tva: req.body.tva,
             total_ttc: req.body.totalTTC,
-            remise: req.body.remise || 0,
+            remise: req.body.remise !== undefined ? req.body.remise : 0,
             parentId: req.body.parentId || 0,
             split_id: req.body.splitId || null
         };
@@ -386,14 +387,22 @@ const createQuote = async (req, res) => {
 
     } catch (error) {
         // Rollback the transaction on error
-        await connection.rollback();
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error('Error during rollback:', rollbackError);
+            }
+        }
         console.error('Error creating quote:', error);
         res.status(500).json({
             error: 'Error creating quote',
             details: error.message
         });
     } finally {
-        connection.release();
+        if (connection) {
+            connection.release();
+        }
     }
 };
 
@@ -448,7 +457,7 @@ const updateQuote = async (req, res) => {
             [
                 client_name, site_name, object, date, supply_description, labor_description,
                 supply_exchange_rate, supply_margin_rate, labor_exchange_rate, labor_margin_rate,
-                total_supplies_ht, total_labor_ht, total_ht, tva, total_ttc, remise || 0,
+                total_supplies_ht, total_labor_ht, total_ht, tva, total_ttc, remise !== undefined ? remise : 0,
                 confirmed || false, reminderDate || null, parentId || null, split_id || null,
                 req.params.id
             ]

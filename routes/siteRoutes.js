@@ -3,6 +3,7 @@ const router = express.Router();
 const siteController = require('../controllers/siteController');
 
 // Site routes
+router.get('/', siteController.getAllSites);
 router.get('/by-client', siteController.getSitesByClientId);
 router.get('/:id', siteController.getSiteById);
 router.post('/', siteController.createSite);

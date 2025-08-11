@@ -1,5 +1,44 @@
 const pool = require('../database/pool');
 
+// Get debug information overview
+const getDebugInfo = async (req, res) => {
+    try {
+        // Get basic database info
+        const [tables] = await pool.query(`
+            SELECT table_name, table_rows
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+        `);
+
+        // Get connection pool status
+        const poolStatus = pool.pool;
+        const total = poolStatus ? poolStatus.length || 0 : 0;
+        const used = poolStatus ? (poolStatus.numUsed ? poolStatus.numUsed() : 0) : 0;
+        const idle = total - used;
+
+        res.json({
+            status: 'debug',
+            timestamp: new Date().toISOString(),
+            database: {
+                tables: tables.length,
+                tableNames: tables.map(t => t.table_name)
+            },
+            connectionPool: {
+                total: total,
+                idle: idle,
+                used: used
+            },
+            endpoints: {
+                databaseStructure: '/api/debug/database-structure',
+                testSiteLookup: '/api/debug/test-site-lookup/:clientId'
+            }
+        });
+    } catch (error) {
+        console.error('Error getting debug info:', error);
+        res.status(500).json({ error: 'Error getting debug info' });
+    }
+};
+
 // Get database tables and structure information
 const getDatabaseStructure = async (req, res) => {
     try {
@@ -103,6 +142,7 @@ const testSiteLookup = async (req, res) => {
 };
 
 module.exports = {
+    getDebugInfo,
     getDatabaseStructure,
     testSiteLookup
 };
