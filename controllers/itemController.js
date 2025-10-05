@@ -183,14 +183,20 @@ const importItems = async (req, res) => {
         // Process valid items one by one
         for (const validItem of processResult.validItems) {
             try {
-                const newItem = await pool.query(
-                    'INSERT INTO items (description, price) VALUES ($1, $2) RETURNING *',
+                const [result] = await pool.query(
+                    'INSERT INTO items (description, price) VALUES (?, ?)',
                     [validItem.item.description, validItem.item.price]
+                );
+
+                // Get the newly created item
+                const [rows] = await pool.query(
+                    'SELECT * FROM items WHERE description = ? ORDER BY created_at DESC LIMIT 1',
+                    [validItem.item.description]
                 );
 
                 results.successful.push({
                     rowIndex: validItem.rowIndex,
-                    item: newItem.rows[0],
+                    item: rows[0],
                     rawData: validItem.rawData
                 });
                 results.summary.imported++;
