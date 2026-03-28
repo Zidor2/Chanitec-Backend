@@ -44,6 +44,24 @@ class Split {
         );
         return rows[0];
     }
+
+    /**
+     * Returns client + site for a split code (global uniqueness check).
+     */
+    static async findLocationByCode(code) {
+        const rows = await safeQuery(
+            `SELECT s.Code, s.site_id,
+                    site.name AS site_name,
+                    c.id AS client_id,
+                    c.name AS client_name
+             FROM split s
+             INNER JOIN sites site ON site.id = s.site_id
+             INNER JOIN clients c ON c.id = site.client_id
+             WHERE s.Code = ?`,
+            [code]
+        );
+        return rows[0] || null;
+    }
 }
 
 module.exports = Split;

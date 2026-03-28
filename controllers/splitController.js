@@ -11,6 +11,30 @@ const getAllSplits = async (req, res) => {
     }
 };
 
+// GET /api/splits/lookup?code=... — where this split code exists (client > site)
+const getSplitLocationByCode = async (req, res) => {
+    const code = typeof req.query.code === 'string' ? req.query.code.trim() : '';
+    if (!code) {
+        return res.status(400).json({ error: 'Query parameter "code" is required' });
+    }
+    try {
+        const row = await Split.findLocationByCode(code);
+        if (!row) {
+            return res.json({ exists: false });
+        }
+        return res.json({
+            exists: true,
+            clientName: row.client_name,
+            siteName: row.site_name,
+            siteId: row.site_id,
+            clientId: row.client_id
+        });
+    } catch (error) {
+        console.error('Error looking up split code:', error);
+        res.status(500).json({ error: 'Error looking up split code' });
+    }
+};
+
 // Get split by code
 const getSplitById = async (req, res) => {
     try {
@@ -82,6 +106,7 @@ const findBySiteId = async (req, res) => {
 
 module.exports = {
     getAllSplits,
+    getSplitLocationByCode,
     getSplitById,
     createSplit,
     updateSplit,
