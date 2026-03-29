@@ -1,4 +1,14 @@
 const { pool } = require('../database/pool');
+const TRANSIENT_DB_ERRORS = new Set([
+    'PROTOCOL_CONNECTION_LOST',
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'EPIPE'
+]);
+
+const isTransientDbError = (error) => TRANSIENT_DB_ERRORS.has(error?.code);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Safe database query execution with automatic connection management
@@ -6,13 +16,19 @@ const { pool } = require('../database/pool');
  * @param {Array} params - Query parameters
  * @returns {Promise<Array>} Query results
  */
-const safeQuery = async (query, params = []) => {
+const safeQuery = async (query, params = [], attempt = 0) => {
     let connection;
     try {
         connection = await pool.getConnection();
         const [results] = await connection.execute(query, params);
         return results;
     } catch (error) {
+        // Retry once for transient network/db disconnects common on managed hosts.
+        if (isTransientDbError(error) && attempt === 0) {
+            console.warn(`Transient DB error (${error.code}), retrying query once...`);
+            await sleep(300);
+            return safeQuery(query, params, 1);
+        }
         console.error('Database query error:', error);
         throw error;
     } finally {
@@ -27,7 +43,7 @@ const safeQuery = async (query, params = []) => {
  * @param {Function} callback - Function containing transaction logic
  * @returns {Promise<any>} Transaction result
  */
-const withTransaction = async (callback) => {
+const withTransaction = async (callback, attempt = 0) => {
     let connection;
     try {
         connection = await pool.getConnection();
@@ -40,6 +56,15 @@ const withTransaction = async (callback) => {
     } catch (error) {
         if (connection) {
             await connection.rollback();
+        }
+        if (isTransientDbError(error) && attempt === 0) {
+            console.warn(`Transient DB error (${error.code}), retrying transaction once...`);
+            await sleep(300);
+            connection = await pool.getConnection();
+            await connection.beginTransaction();
+            const retryResult = await callback(connection);
+            await connection.commit();
+            return retryResult;
         }
         console.error('Transaction error:', error);
         throw error;

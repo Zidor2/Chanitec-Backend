@@ -11,7 +11,7 @@ const employeeRoutes = require('./routes/employeeRoutes');
 const splitRoutes = require('./routes/splitRoutes');
 
 const app = express();
-const port = 5000; // Force port 5000 for local development
+const port = Number(process.env.PORT) || 5000;
 console.log('🔥 Server PORT:', port);
 
 const allowedOrigins = [
@@ -114,8 +114,7 @@ const startServer = async () => {
         // Test database connection before starting
         const isHealthy = await healthCheck();
         if (!isHealthy) {
-            console.error('❌ Database connection failed. Server will not start.');
-            process.exit(1);
+            console.error('⚠️ Database connection failed at startup. Server will continue and retry on requests.');
         }
 
         app.listen(port, "0.0.0.0", () => {

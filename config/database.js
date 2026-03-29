@@ -9,9 +9,9 @@ const config = {
         port: process.env.DB_PORT || 3306,
         connectionLimit: 5,
         queueLimit: 10,
-        acquireTimeout: 60000,
-        timeout: 60000,
-        reconnect: true,
+        connectTimeout: 60000,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 10000,
         charset: 'utf8mb4',
         timezone: '+00:00',
         ssl: false
@@ -24,9 +24,9 @@ const config = {
         port: process.env.DB_PORT || 3306,
         connectionLimit: 3, // Reduced for AlwaysData limits
         queueLimit: 5,
-        acquireTimeout: 60000,
-        timeout: 60000,
-        reconnect: true,
+        connectTimeout: 60000,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 10000,
         charset: 'utf8mb4',
         timezone: '+00:00',
         ssl: {
