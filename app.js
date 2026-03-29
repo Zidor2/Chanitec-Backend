@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const app = express();
 
+//test
 // CORS configuration
 const corsOptions = {
   origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000'],
