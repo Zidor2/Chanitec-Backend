@@ -184,8 +184,8 @@ const createQuote = async (req, res) => {
             `SELECT id FROM quotes WHERE
             client_name = ? AND
             site_name = ? AND
-            object = ? AND
-            date = ? AND
+            `object` = ? AND
+            `date` = ? AND
             supply_description = ? AND
             labor_description = ? AND
             supply_exchange_rate = ? AND
@@ -197,7 +197,8 @@ const createQuote = async (req, res) => {
             total_ht = ? AND
             tva = ? AND
             total_ttc = ? AND
-            parentId = ?`,
+            parentId = ? AND
+            split_id = ?`,
             [
                 req.body.clientName,
                 req.body.siteName,
@@ -255,7 +256,7 @@ const createQuote = async (req, res) => {
         // Insert quote
         const [quoteResult] = await connection.query(
             `INSERT INTO quotes (
-                id, client_name, site_name, object, date,
+                id, client_name, site_name, `object`, `date`,
                 supply_description, labor_description,
                 supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate,

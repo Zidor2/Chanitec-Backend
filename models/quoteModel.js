@@ -26,16 +26,16 @@ class Quote {
     }) {
         const result = await safeQuery(
             `INSERT INTO quotes (
-                id, client_name, site_name, object, date, supply_description,
+                id, client_name, site_name, `object`, `date`, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, remise, confirmed, reminderDate, parentId
-            ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                total_labor_ht, total_ht, tva, total_ttc, remise, confirmed, reminderDate, parentId, split_id
+            ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, remise, confirmed, reminderDate, parentId,split_id
+                total_labor_ht, total_ht, tva, total_ttc, remise, confirmed, reminderDate, parentId, split_id
             ]
         );
         return this.findById(result.insertId);
@@ -75,18 +75,18 @@ class Quote {
     }) {
         await safeQuery(
             `UPDATE quotes SET
-                client_name = ?, site_name = ?, object = ?, date = ?,
+                client_name = ?, site_name = ?, `object` = ?, `date` = ?,
                 supply_description = ?, labor_description = ?,
                 supply_exchange_rate = ?, supply_margin_rate = ?,
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
-                tva = ?, total_ttc = ?, remise = ?, confirmed = ?, reminderDate = ?, parentId = ? , split_id
+                tva = ?, total_ttc = ?, remise = ?, confirmed = ?, reminderDate = ?, parentId = ?, split_id = ?
             WHERE id = ?`,
             [
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
                 labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, remise, confirmed, reminderDate, parentId,split_id,id
+                total_labor_ht, total_ht, tva, total_ttc, remise, confirmed, reminderDate, parentId, split_id, id
             ]
         );
         return this.findById(id);
