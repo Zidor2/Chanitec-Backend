@@ -25,12 +25,12 @@ class Quote {
         split_id
     }) {
         const result = await safeQuery(
-            `INSERT INTO quotes (
-                id, client_name, site_name, `object`, `date`, supply_description,
-                labor_description, supply_exchange_rate, supply_margin_rate,
-                labor_exchange_rate, labor_margin_rate, total_supplies_ht,
-                total_labor_ht, total_ht, tva, total_ttc, remise, confirmed, reminderDate, parentId, split_id
-            ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            'INSERT INTO quotes (\n'
+            + 'id, client_name, site_name, `object`, `date`, supply_description,\n'
+            + 'labor_description, supply_exchange_rate, supply_margin_rate,\n'
+            + 'labor_exchange_rate, labor_margin_rate, total_supplies_ht,\n'
+            + 'total_labor_ht, total_ht, tva, total_ttc, remise, confirmed, reminderDate, parentId, split_id\n'
+            + ') VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,
@@ -74,14 +74,14 @@ class Quote {
         split_id
     }) {
         await safeQuery(
-            `UPDATE quotes SET
-                client_name = ?, site_name = ?, `object` = ?, `date` = ?,
-                supply_description = ?, labor_description = ?,
-                supply_exchange_rate = ?, supply_margin_rate = ?,
-                labor_exchange_rate = ?, labor_margin_rate = ?,
-                total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
-                tva = ?, total_ttc = ?, remise = ?, confirmed = ?, reminderDate = ?, parentId = ?, split_id = ?
-            WHERE id = ?`,
+            'UPDATE quotes SET\n'
+            + 'client_name = ?, site_name = ?, `object` = ?, `date` = ?,\n'
+            + 'supply_description = ?, labor_description = ?,\n'
+            + 'supply_exchange_rate = ?, supply_margin_rate = ?,\n'
+            + 'labor_exchange_rate = ?, labor_margin_rate = ?,\n'
+            + 'total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,\n'
+            + 'tva = ?, total_ttc = ?, remise = ?, confirmed = ?, reminderDate = ?, parentId = ?, split_id = ?\n'
+            + 'WHERE id = ?',
             [
                 client_name, site_name, object, date, supply_description,
                 labor_description, supply_exchange_rate, supply_margin_rate,

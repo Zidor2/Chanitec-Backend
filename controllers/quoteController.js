@@ -180,27 +180,26 @@ const createQuote = async (req, res) => {
 
     try {
         // 1. Check for duplicate quote
-        const [existingQuotes] = await connection.query(
-            `SELECT id FROM quotes WHERE
-            client_name = ? AND
-            site_name = ? AND
-            object = ? AND
-            date = ? AND
-            supply_description = ? AND
-            labor_description = ? AND
-            supply_exchange_rate = ? AND
-            supply_margin_rate = ? AND
-            labor_exchange_rate = ? AND
-            labor_margin_rate = ? AND
-            total_supplies_ht = ? AND
-            total_labor_ht = ? AND
-            total_ht = ? AND
-            tva = ? AND
-            total_ttc = ? AND
-            parentId = ? AND
-            split_id = ?`,
-            [
-                req.body.clientName,
+        const [existingQuotes] = await connection.execute(
+  `SELECT id FROM quotes WHERE
+    client_name = ? AND
+    site_name = ? AND
+    \`object\` = ? AND
+    \`date\` = ? AND
+    supply_description = ? AND
+    labor_description = ? AND
+    supply_exchange_rate = ? AND
+    supply_margin_rate = ? AND
+    labor_exchange_rate = ? AND
+    labor_margin_rate = ? AND
+    total_supplies_ht = ? AND
+    total_labor_ht = ? AND
+    total_ht = ? AND
+    tva = ? AND
+    total_ttc = ? AND
+    parentId = ? AND
+    split_id = ?`,
+  [             req.body.clientName,
                 req.body.siteName,
                 req.body.object,
                 req.body.date,
@@ -254,15 +253,15 @@ const createQuote = async (req, res) => {
         const quoteId = req.body.id || crypto.randomUUID();
 
         // Insert quote
-        const [quoteResult] = await connection.query(
-            `INSERT INTO quotes (
-                id, client_name, site_name, object, date,
-                supply_description, labor_description,
-                supply_exchange_rate, supply_margin_rate,
-                labor_exchange_rate, labor_margin_rate,
-                total_supplies_ht, total_labor_ht, total_ht,
-                tva, total_ttc, remise, parentId, split_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        const [quoteResult] = await connection.execute(
+            'INSERT INTO quotes (\n'
+            + 'id, client_name, site_name, `object`, `date`,\n'
+            + 'supply_description, labor_description,\n'
+            + 'supply_exchange_rate, supply_margin_rate,\n'
+            + 'labor_exchange_rate, labor_margin_rate,\n'
+            + 'total_supplies_ht, total_labor_ht, total_ht,\n'
+            + 'tva, total_ttc, remise, `parentId`, split_id\n'
+            + ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 quoteId,
                 quoteData.client_name,
@@ -289,7 +288,7 @@ const createQuote = async (req, res) => {
         // 2. Insert supply items
         if (req.body.supplyItems && req.body.supplyItems.length > 0) {
             for (const item of req.body.supplyItems) {
-                await connection.query(
+                await connection.execute(
                     `INSERT INTO supply_items (
                         id, quote_id, description, quantity,
                         price_euro, price_dollar, unit_price_dollar,
@@ -311,7 +310,7 @@ const createQuote = async (req, res) => {
         // 3. Insert labor items
         if (req.body.laborItems && req.body.laborItems.length > 0) {
             for (const item of req.body.laborItems) {
-                await connection.query(
+                await connection.execute(
                     `INSERT INTO labor_items (
                         id, quote_id, description, nb_technicians,
                         nb_hours, weekend_multiplier, price_euro,
@@ -336,9 +335,9 @@ const createQuote = async (req, res) => {
         await connection.commit();
 
         // 4. Fetch the complete quote with items
-        const [quoteRows] = await connection.query('SELECT * FROM quotes WHERE id = ?', [quoteId]);
-        const [supplyItems] = await connection.query('SELECT * FROM supply_items WHERE quote_id = ?', [quoteId]);
-        const [laborItems] = await connection.query('SELECT * FROM labor_items WHERE quote_id = ?', [quoteId]);
+        const [quoteRows] = await connection.execute('SELECT * FROM quotes WHERE id = ?', [quoteId]);
+        const [supplyItems] = await connection.execute('SELECT * FROM supply_items WHERE quote_id = ?', [quoteId]);
+        const [laborItems] = await connection.execute('SELECT * FROM labor_items WHERE quote_id = ?', [quoteId]);
 
         // Convert to frontend format
         const savedQuote = {
