@@ -28,6 +28,7 @@ const getAllQuotes = async (req, res) => {
             tva: row.tva,
             totalTTC: row.total_ttc,
             remise: row.remise,
+            hbc: row.hbc,
             parentId: row.parentId,
             createdAt: row.created_at,
             updatedAt: row.updated_at,
@@ -82,12 +83,14 @@ const getQuoteById = async (req, res) => {
             tva: quoteRows[0].tva,
             totalTTC: quoteRows[0].total_ttc,
             remise: quoteRows[0].remise,
+            hbc: quoteRows[0].hbc,
             parentId: quoteRows[0].parentId,
             createdAt: quoteRows[0].created_at,
             updatedAt: quoteRows[0].updated_at,
             splitId: quoteRows[0].split_id,
             supplyItems: supplyItems.map(item => ({
                 id: item.id,
+                item_id: item.item_id,
                 description: item.description,
                 quantity: item.quantity,
                 priceEuro: item.price_euro,
@@ -156,16 +159,81 @@ const confirmQuote = async (req, res) => {
             return res.status(400).json({ error: 'number_chanitec is required and must be a string' });
         }
 
-        const result = await safeQuery(
-            'UPDATE quotes SET confirmed = ?, number_chanitec = ? WHERE id = ?',
-            [confirmed, number_chanitec, req.params.id]
-        );
+        // Start a transaction for atomicity
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Quote not found' });
+        try {
+            // Update quote confirmation status
+            const [result] = await connection.execute(
+                'UPDATE quotes SET confirmed = ?, number_chanitec = ? WHERE id = ?',
+                [confirmed, number_chanitec, req.params.id]
+            );
+
+            if (result.affectedRows === 0) {
+                await connection.rollback();
+                connection.release();
+                return res.status(404).json({ error: 'Quote not found' });
+            }
+
+            // If confirming the quote, deduct inventory for supply items
+            if (confirmed) {
+                console.log(`Confirming quote ${req.params.id}, deducting inventory...`);
+
+                // Get supply items for this quote
+                const [supplyItems] = await connection.execute(
+                    'SELECT * FROM supply_items WHERE quote_id = ?',
+                    [req.params.id]
+                );
+
+                console.log(`Found ${supplyItems.length} supply items for quote ${req.params.id}`);
+
+                // Deduct inventory for each supply item
+                for (const item of supplyItems) {
+                    console.log(`Processing supply item:`, {
+                        id: item.id,
+                        item_id: item.item_id,
+                        description: item.description,
+                        quantity: item.quantity
+                    });
+
+                    if (item.item_id) {
+                        // Get current item quantity
+                        const [currentItem] = await connection.execute(
+                            'SELECT quantity FROM items WHERE id = ?',
+                            [item.item_id]
+                        );
+
+                        if (currentItem.length > 0) {
+                            const currentQuantity = currentItem[0].quantity || 0;
+                            const newQuantity = currentQuantity - item.quantity;
+
+                            // Update item quantity (allow negative values)
+                            await connection.execute(
+                                'UPDATE items SET quantity = ? WHERE id = ?',
+                                [newQuantity, item.item_id]
+                            );
+
+                            console.log(`Deducted ${item.quantity} from item ${item.item_id}. Quantity: ${currentQuantity} -> ${newQuantity}`);
+                        } else {
+                            console.warn(`Item ${item.item_id} not found in catalog`);
+                        }
+                    } else {
+                        console.warn(`Supply item ${item.id} has no item_id, skipping inventory deduction`);
+                    }
+                }
+            }
+
+            // Commit the transaction
+            await connection.commit();
+            connection.release();
+
+            res.json({ message: 'Quote confirmation status and number_chanitec updated successfully' });
+        } catch (error) {
+            await connection.rollback();
+            connection.release();
+            throw error;
         }
-
-        res.json({ message: 'Quote confirmation status and number_chanitec updated successfully' });
     } catch (error) {
         console.error('Error updating quote confirmation:', error);
         res.status(500).json({ error: 'Error updating quote confirmation' });
@@ -245,6 +313,7 @@ const createQuote = async (req, res) => {
             tva: req.body.tva,
             total_ttc: req.body.totalTTC,
             remise: req.body.remise || 0,
+            hbc: req.body.hbc || 0,
             parentId: req.body.parentId || 0,
             split_id: req.body.splitId || null
         };
@@ -260,8 +329,8 @@ const createQuote = async (req, res) => {
             + 'supply_exchange_rate, supply_margin_rate,\n'
             + 'labor_exchange_rate, labor_margin_rate,\n'
             + 'total_supplies_ht, total_labor_ht, total_ht,\n'
-            + 'tva, total_ttc, remise, `parentId`, split_id\n'
-            + ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            + 'tva, total_ttc, remise, hbc, `parentId`, split_id\n'
+            + ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 quoteId,
                 quoteData.client_name,
@@ -280,6 +349,7 @@ const createQuote = async (req, res) => {
                 quoteData.tva,
                 quoteData.total_ttc,
                 quoteData.remise,
+                quoteData.hbc,
                 quoteData.parentId || 0,
                 quoteData.split_id
             ]
@@ -290,12 +360,13 @@ const createQuote = async (req, res) => {
             for (const item of req.body.supplyItems) {
                 await connection.execute(
                     `INSERT INTO supply_items (
-                        id, quote_id, description, quantity,
+                        id, quote_id, item_id, description, quantity,
                         price_euro, price_dollar, unit_price_dollar,
                         total_price_dollar
-                    ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?)`,
+                    ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         quoteId,
+                        item.item_id || null,
                         item.description,
                         item.quantity,
                         item.priceEuro,
@@ -358,6 +429,7 @@ const createQuote = async (req, res) => {
             tva: quoteRows[0].tva,
             totalTTC: quoteRows[0].total_ttc,
             remise: quoteRows[0].remise,
+            hbc: quoteRows[0].hbc,
             parentId: quoteRows[0].parentId,
             createdAt: quoteRows[0].created_at,
             updatedAt: quoteRows[0].updated_at,
@@ -422,10 +494,11 @@ const updateQuote = async (req, res) => {
         tva,
         total_ttc,
         remise,
+        hbc,
         confirmed,
         reminderDate,
         parentId,
-        split_id // <-- Use split_id here
+        split_id
     } = req.body;
 
     // Validate required fields
@@ -443,14 +516,14 @@ const updateQuote = async (req, res) => {
                 supply_exchange_rate = ?, supply_margin_rate = ?,
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
-                tva = ?, total_ttc = ?, remise = ?, confirmed = ?, reminderDate = ?,
+                tva = ?, total_ttc = ?, remise = ?, hbc = ?, confirmed = ?, reminderDate = ?,
                 parentId = ?, split_id = ?
             WHERE id = ?`,
             [
                 client_name, site_name, object, date, supply_description, labor_description,
                 supply_exchange_rate, supply_margin_rate, labor_exchange_rate, labor_margin_rate,
                 total_supplies_ht, total_labor_ht, total_ht, tva, total_ttc, remise || 0,
-                confirmed || false, reminderDate || null, parentId || null, split_id || null,
+                hbc || 0, confirmed || false, reminderDate || null, parentId || null, split_id || null,
                 req.params.id
             ]
         );
