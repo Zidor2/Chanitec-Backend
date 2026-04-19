@@ -30,7 +30,7 @@ class Quote {
             + 'id, client_name, site_name, `object`, `date`, supply_description,\n'
             + 'labor_description, supply_exchange_rate, supply_margin_rate,\n'
             + 'labor_exchange_rate, labor_margin_rate, total_supplies_ht,\n'
-            + 'total_labor_ht, total_ht, tva, total_ttc, remise, hbc, confirmed, reminderDate, parentId, split_id\n'
+            + 'total_labor_ht, total_ht, tva, total_ttc, remise, HBC, confirmed, reminderDate, parentId, split_id\n'
             + ') VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 client_name, site_name, object, date, supply_description,
@@ -82,7 +82,7 @@ class Quote {
             + 'supply_exchange_rate = ?, supply_margin_rate = ?,\n'
             + 'labor_exchange_rate = ?, labor_margin_rate = ?,\n'
             + 'total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,\n'
-            + 'tva = ?, total_ttc = ?, remise = ?, hbc = ?, confirmed = ?, reminderDate = ?, parentId = ?, split_id = ?\n'
+            + 'tva = ?, total_ttc = ?, remise = ?, HBC = ?, confirmed = ?, reminderDate = ?, parentId = ?, split_id = ?\n'
             + 'WHERE id = ?',
             [
                 client_name, site_name, object, date, supply_description,

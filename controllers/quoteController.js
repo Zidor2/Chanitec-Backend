@@ -5,7 +5,10 @@ const crypto = require('crypto');
 // Get all quotes
 const getAllQuotes = async (req, res) => {
     try {
-        const rows = await safeQuery('SELECT * FROM quotes ORDER BY date DESC, created_at DESC');
+        console.log('[DEBUG] getAllQuotes - Fetching all quotes');
+        const rows = await safeQuery('SELECT *, HBC AS hbc FROM quotes ORDER BY date DESC, created_at DESC');
+
+        console.log(`[DEBUG] getAllQuotes - Retrieved ${rows.length} quotes from database`);
 
         // Convert field names from snake_case to camelCase for frontend
         const quotes = rows.map(row => ({
@@ -35,6 +38,7 @@ const getAllQuotes = async (req, res) => {
             splitId: row.split_id,
         }));
 
+        console.log('[DEBUG] getAllQuotes - Sending formatted quotes to frontend');
         res.json(quotes);
     } catch (error) {
         console.error('Error fetching quotes:', error);
@@ -45,12 +49,17 @@ const getAllQuotes = async (req, res) => {
 // Get quote by ID
 const getQuoteById = async (req, res) => {
     try {
+        console.log(`[DEBUG] getQuoteById - Fetching quote with ID: ${req.params.id}`);
+
         // Get the quote
-        const quoteRows = await safeQuery('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
+        const quoteRows = await safeQuery('SELECT *, HBC AS hbc FROM quotes WHERE id = ?', [req.params.id]);
 
         if (quoteRows.length === 0) {
+            console.log(`[DEBUG] getQuoteById - Quote not found for ID: ${req.params.id}`);
             return res.status(404).json({ error: 'Quote not found' });
         }
+
+        console.log(`[DEBUG] getQuoteById - Found quote ID: ${quoteRows[0].id}, Client: ${quoteRows[0].client_name}`);
 
         // Get supply items for this quote
         const supplyItems = await safeQuery(
@@ -58,11 +67,15 @@ const getQuoteById = async (req, res) => {
             [req.params.id]
         );
 
+        console.log(`[DEBUG] getQuoteById - Retrieved ${supplyItems.length} supply items`);
+
         // Get labor items for this quote
         const laborItems = await safeQuery(
             'SELECT * FROM labor_items WHERE quote_id = ?',
             [req.params.id]
         );
+
+        console.log(`[DEBUG] getQuoteById - Retrieved ${laborItems.length} labor items`);
 
         // Format the response
         const quote = {
@@ -111,6 +124,8 @@ const getQuoteById = async (req, res) => {
             }))
         };
 
+        console.log(`[DEBUG] getQuoteById - Quote formatted successfully with remise: ${quote.remise}, hbc: ${quote.hbc}`);
+        console.log('[DEBUG] getQuoteById - Sending quote response to frontend');
         res.json(quote);
     } catch (error) {
         console.error('Error getting quote:', error);
@@ -138,8 +153,37 @@ const setReminderDate = async (req, res) => {
         }
 
         // Return the updated quote
-        const updatedQuote = await safeQuery('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
-        res.json(updatedQuote[0]);
+        const updatedQuote = await safeQuery('SELECT *, HBC AS hbc FROM quotes WHERE id = ?', [req.params.id]);
+
+        // Format response to camelCase
+        const formattedQuote = {
+            id: updatedQuote[0].id,
+            clientName: updatedQuote[0].client_name,
+            siteName: updatedQuote[0].site_name,
+            object: updatedQuote[0].object,
+            date: updatedQuote[0].date,
+            supplyDescription: updatedQuote[0].supply_description,
+            laborDescription: updatedQuote[0].labor_description,
+            supplyExchangeRate: updatedQuote[0].supply_exchange_rate,
+            supplyMarginRate: updatedQuote[0].supply_margin_rate,
+            laborExchangeRate: updatedQuote[0].labor_exchange_rate,
+            laborMarginRate: updatedQuote[0].labor_margin_rate,
+            totalSuppliesHT: updatedQuote[0].total_supplies_ht,
+            totalLaborHT: updatedQuote[0].total_labor_ht,
+            totalHT: updatedQuote[0].total_ht,
+            tva: updatedQuote[0].tva,
+            totalTTC: updatedQuote[0].total_ttc,
+            remise: updatedQuote[0].remise,
+            hbc: updatedQuote[0].hbc,
+            parentId: updatedQuote[0].parentId,
+            confirmed: updatedQuote[0].confirmed,
+            reminderDate: updatedQuote[0].reminderDate,
+            splitId: updatedQuote[0].split_id,
+            createdAt: updatedQuote[0].created_at,
+            updatedAt: updatedQuote[0].updated_at,
+        };
+
+        res.json(formattedQuote);
     } catch (error) {
         console.error('Error setting reminder date:', error);
         res.status(500).json({ error: 'Error setting reminder date' });
@@ -150,12 +194,17 @@ const confirmQuote = async (req, res) => {
     const { confirmed, number_chanitec } = req.body;
 
     try {
+        console.log(`[DEBUG] confirmQuote - Request received for quote ID: ${req.params.id}`);
+        console.log(`[DEBUG] confirmQuote - Payload: confirmed=${confirmed}, number_chanitec=${number_chanitec}`);
+
         // Validate confirmed value
         if (typeof confirmed !== 'boolean') {
+            console.log(`[DEBUG] confirmQuote - Validation failed: confirmed is not boolean`);
             return res.status(400).json({ error: 'Confirmed status must be a boolean' });
         }
         // Validate number_chanitec (optional: you can add more validation)
         if (!number_chanitec || typeof number_chanitec !== 'string') {
+            console.log(`[DEBUG] confirmQuote - Validation failed: number_chanitec missing or not string`);
             return res.status(400).json({ error: 'number_chanitec is required and must be a string' });
         }
 
@@ -164,6 +213,7 @@ const confirmQuote = async (req, res) => {
         await connection.beginTransaction();
 
         try {
+            console.log(`[DEBUG] confirmQuote - Updating quote confirmation status...`);
             // Update quote confirmation status
             const [result] = await connection.execute(
                 'UPDATE quotes SET confirmed = ?, number_chanitec = ? WHERE id = ?',
@@ -173,12 +223,15 @@ const confirmQuote = async (req, res) => {
             if (result.affectedRows === 0) {
                 await connection.rollback();
                 connection.release();
+                console.log(`[DEBUG] confirmQuote - Quote not found for ID: ${req.params.id}`);
                 return res.status(404).json({ error: 'Quote not found' });
             }
 
+            console.log(`[DEBUG] confirmQuote - Quote updated successfully. Confirmed: ${confirmed}, Number: ${number_chanitec}`);
+
             // If confirming the quote, deduct inventory for supply items
             if (confirmed) {
-                console.log(`Confirming quote ${req.params.id}, deducting inventory...`);
+                console.log(`[DEBUG] confirmQuote - Confirming quote ${req.params.id}, deducting inventory...`);
 
                 // Get supply items for this quote
                 const [supplyItems] = await connection.execute(
@@ -228,10 +281,12 @@ const confirmQuote = async (req, res) => {
             await connection.commit();
             connection.release();
 
+            console.log(`[DEBUG] confirmQuote - Transaction committed successfully for quote ${req.params.id}`);
             res.json({ message: 'Quote confirmation status and number_chanitec updated successfully' });
         } catch (error) {
             await connection.rollback();
             connection.release();
+            console.error(`[DEBUG] confirmQuote - Transaction rollback: ${error.message}`);
             throw error;
         }
     } catch (error) {
@@ -242,11 +297,17 @@ const confirmQuote = async (req, res) => {
 
 // Create new quote
 const createQuote = async (req, res) => {
+    console.log('[DEBUG] createQuote - Request received');
+    console.log('[DEBUG] createQuote - === CREATE QUOTE REQUEST BODY ===');
+    console.log(JSON.stringify(req.body, null, 2));
+    console.log('[DEBUG] createQuote - === END REQUEST BODY ===');
+
     // Start a transaction
     const connection = await pool.getConnection();
     await connection.beginTransaction();
 
     try {
+        console.log('[DEBUG] createQuote - Checking for duplicate quote...');
         // 1. Check for duplicate quote
         const [existingQuotes] = await connection.execute(
   `SELECT id FROM quotes WHERE
@@ -288,12 +349,15 @@ const createQuote = async (req, res) => {
         );
 
         if (existingQuotes.length > 0) {
+            console.log(`[DEBUG] createQuote - Duplicate quote found! ID: ${existingQuotes[0].id}`);
             await connection.rollback();
             return res.status(400).json({
                 error: 'A quote with these exact details already exists',
                 existingQuoteId: existingQuotes[0].id
             });
         }
+
+        console.log('[DEBUG] createQuote - No duplicates found. Proceeding with creation...');
 
         // 2. Create the quote
         const quoteData = {
@@ -320,8 +384,11 @@ const createQuote = async (req, res) => {
 
         // Generate quote ID
         const quoteId = req.body.id || crypto.randomUUID();
+        console.log(`[DEBUG] createQuote - Generated quote ID: ${quoteId}`);
+        console.log(`[DEBUG] createQuote - Quote data: remise=${quoteData.remise}, hbc=${quoteData.hbc}`);
 
         // Insert quote
+        console.log('[DEBUG] createQuote - Inserting quote into database...');
         const [quoteResult] = await connection.execute(
             'INSERT INTO quotes (\n'
             + 'id, client_name, site_name, `object`, `date`,\n'
@@ -329,7 +396,7 @@ const createQuote = async (req, res) => {
             + 'supply_exchange_rate, supply_margin_rate,\n'
             + 'labor_exchange_rate, labor_margin_rate,\n'
             + 'total_supplies_ht, total_labor_ht, total_ht,\n'
-            + 'tva, total_ttc, remise, hbc, `parentId`, split_id\n'
+            + 'tva, total_ttc, remise, HBC, `parentId`, split_id\n'
             + ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 quoteId,
@@ -357,6 +424,7 @@ const createQuote = async (req, res) => {
 
         // 2. Insert supply items
         if (req.body.supplyItems && req.body.supplyItems.length > 0) {
+            console.log(`[DEBUG] createQuote - Inserting ${req.body.supplyItems.length} supply items...`);
             for (const item of req.body.supplyItems) {
                 await connection.execute(
                     `INSERT INTO supply_items (
@@ -380,6 +448,7 @@ const createQuote = async (req, res) => {
 
         // 3. Insert labor items
         if (req.body.laborItems && req.body.laborItems.length > 0) {
+            console.log(`[DEBUG] createQuote - Inserting ${req.body.laborItems.length} labor items...`);
             for (const item of req.body.laborItems) {
                 await connection.execute(
                     `INSERT INTO labor_items (
@@ -403,12 +472,16 @@ const createQuote = async (req, res) => {
         }
 
         // Commit the transaction
+        console.log('[DEBUG] createQuote - Committing transaction...');
         await connection.commit();
+        console.log(`[DEBUG] createQuote - Transaction committed successfully. Quote ${quoteId} created.`);
 
         // 4. Fetch the complete quote with items
-        const [quoteRows] = await connection.execute('SELECT * FROM quotes WHERE id = ?', [quoteId]);
+        const [quoteRows] = await connection.execute('SELECT *, HBC AS hbc FROM quotes WHERE id = ?', [quoteId]);
         const [supplyItems] = await connection.execute('SELECT * FROM supply_items WHERE quote_id = ?', [quoteId]);
         const [laborItems] = await connection.execute('SELECT * FROM labor_items WHERE quote_id = ?', [quoteId]);
+
+        console.log(`[DEBUG] createQuote - Quote fetched: remise=${quoteRows[0].remise}, hbc=${quoteRows[0].hbc}`);
 
         // Convert to frontend format
         const savedQuote = {
@@ -455,11 +528,13 @@ const createQuote = async (req, res) => {
             }))
         };
 
+        console.log(`[DEBUG] createQuote - Quote successfully created and formatted. Sending response with remise=${savedQuote.remise}, hbc=${savedQuote.hbc}`);
         res.status(201).json(savedQuote);
 
     } catch (error) {
         // Rollback the transaction on error
         await connection.rollback();
+        console.error('[DEBUG] createQuote - Error occurred, rolling back transaction:', error);
         console.error('Error creating quote:', error);
         res.status(500).json({
             error: 'Error creating quote',
@@ -473,42 +548,45 @@ const createQuote = async (req, res) => {
 // Update quote
 const updateQuote = async (req, res) => {
     // Log the entire request body
-    console.log('=== UPDATE QUOTE REQUEST BODY ===');
+    console.log('[DEBUG] updateQuote - Request received for quote ID:', req.params.id);
+    console.log('[DEBUG] updateQuote - === UPDATE QUOTE REQUEST BODY ===');
     console.log(JSON.stringify(req.body, null, 2));
-    console.log('=== END REQUEST BODY ===');
+    console.log('[DEBUG] updateQuote - === END REQUEST BODY ===');
 
+    // Map camelCase from frontend to snake_case for database
     const {
-        client_name,
-        site_name,
+        clientName,
+        siteName,
         object,
         date,
-        supply_description,
-        labor_description,
-        supply_exchange_rate,
-        supply_margin_rate,
-        labor_exchange_rate,
-        labor_margin_rate,
-        total_supplies_ht,
-        total_labor_ht,
-        total_ht,
+        supplyDescription,
+        laborDescription,
+        supplyExchangeRate,
+        supplyMarginRate,
+        laborExchangeRate,
+        laborMarginRate,
+        totalSuppliesHT,
+        totalLaborHT,
+        totalHT,
         tva,
-        total_ttc,
+        totalTTC,
         remise,
         hbc,
         confirmed,
         reminderDate,
         parentId,
-        split_id
+        splitId
     } = req.body;
 
     // Validate required fields
-    if (!client_name || !site_name || !date || !supply_exchange_rate || !supply_margin_rate ||
-        !labor_exchange_rate || !labor_margin_rate || !total_supplies_ht || !total_labor_ht ||
-        !total_ht || !tva || !total_ttc) {
+    if (!clientName || !siteName || !date || !supplyExchangeRate || !supplyMarginRate ||
+        !laborExchangeRate || !laborMarginRate || !totalSuppliesHT || !totalLaborHT ||
+        !totalHT || !tva || !totalTTC) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
     try {
+        console.log(`[DEBUG] updateQuote - Updating quote ID: ${req.params.id} with remise=${remise || 0}, hbc=${hbc || 0}`);
         const result = await safeQuery(
             `UPDATE quotes SET
                 client_name = ?, site_name = ?, object = ?, date = ?,
@@ -516,22 +594,54 @@ const updateQuote = async (req, res) => {
                 supply_exchange_rate = ?, supply_margin_rate = ?,
                 labor_exchange_rate = ?, labor_margin_rate = ?,
                 total_supplies_ht = ?, total_labor_ht = ?, total_ht = ?,
-                tva = ?, total_ttc = ?, remise = ?, hbc = ?, confirmed = ?, reminderDate = ?,
+                tva = ?, total_ttc = ?, remise = ?, HBC = ?, confirmed = ?, reminderDate = ?,
                 parentId = ?, split_id = ?
             WHERE id = ?`,
             [
-                client_name, site_name, object, date, supply_description, labor_description,
-                supply_exchange_rate, supply_margin_rate, labor_exchange_rate, labor_margin_rate,
-                total_supplies_ht, total_labor_ht, total_ht, tva, total_ttc, remise || 0,
-                hbc || 0, confirmed || false, reminderDate || null, parentId || null, split_id || null,
+                clientName, siteName, object, date, supplyDescription, laborDescription,
+                supplyExchangeRate, supplyMarginRate, laborExchangeRate, laborMarginRate,
+                totalSuppliesHT, totalLaborHT, totalHT, tva, totalTTC, remise || 0,
+                hbc || 0, confirmed || false, reminderDate || null, parentId || null, splitId || null,
                 req.params.id
             ]
         );
         if (result.affectedRows === 0) {
+            console.log(`[DEBUG] updateQuote - Quote not found for ID: ${req.params.id}`);
             return res.status(404).json({ error: 'Quote not found' });
         }
-        const updatedQuote = await safeQuery('SELECT * FROM quotes WHERE id = ?', [req.params.id]);
-        res.json(updatedQuote[0]);
+        console.log(`[DEBUG] updateQuote - Quote updated successfully. Fetching updated data...`);
+        const updatedQuote = await safeQuery('SELECT *, HBC AS hbc FROM quotes WHERE id = ?', [req.params.id]);
+
+        // Format response to camelCase for frontend (same as createQuote)
+        const formattedQuote = {
+            id: updatedQuote[0].id,
+            clientName: updatedQuote[0].client_name,
+            siteName: updatedQuote[0].site_name,
+            object: updatedQuote[0].object,
+            date: updatedQuote[0].date,
+            supplyDescription: updatedQuote[0].supply_description,
+            laborDescription: updatedQuote[0].labor_description,
+            supplyExchangeRate: updatedQuote[0].supply_exchange_rate,
+            supplyMarginRate: updatedQuote[0].supply_margin_rate,
+            laborExchangeRate: updatedQuote[0].labor_exchange_rate,
+            laborMarginRate: updatedQuote[0].labor_margin_rate,
+            totalSuppliesHT: updatedQuote[0].total_supplies_ht,
+            totalLaborHT: updatedQuote[0].total_labor_ht,
+            totalHT: updatedQuote[0].total_ht,
+            tva: updatedQuote[0].tva,
+            totalTTC: updatedQuote[0].total_ttc,
+            remise: updatedQuote[0].remise,
+            hbc: updatedQuote[0].hbc,
+            parentId: updatedQuote[0].parentId,
+            confirmed: updatedQuote[0].confirmed,
+            reminderDate: updatedQuote[0].reminderDate,
+            splitId: updatedQuote[0].split_id,
+            createdAt: updatedQuote[0].created_at,
+            updatedAt: updatedQuote[0].updated_at,
+        };
+
+        console.log(`[DEBUG] updateQuote - Quote formatted and sending response with hbc=${formattedQuote.hbc}`);
+        res.json(formattedQuote);
     } catch (error) {
         console.error('Error updating quote:', error);
         res.status(500).json({ error: 'Error updating quote' });
@@ -541,12 +651,16 @@ const updateQuote = async (req, res) => {
 // Delete quote
 const deleteQuote = async (req, res) => {
     try {
+        console.log(`[DEBUG] deleteQuote - Deleting quote ID: ${req.params.id}`);
         const result = await safeQuery('DELETE FROM quotes WHERE id = ?', [req.params.id]);
         if (result.affectedRows === 0) {
+            console.log(`[DEBUG] deleteQuote - Quote not found for ID: ${req.params.id}`);
             return res.status(404).json({ error: 'Quote not found' });
         }
+        console.log(`[DEBUG] deleteQuote - Quote deleted successfully: ${req.params.id}`);
         res.status(204).send();
     } catch (error) {
+        console.error('[DEBUG] deleteQuote - Error:', error);
         console.error('Error deleting quote:', error);
         res.status(500).json({ error: 'Error deleting quote' });
     }

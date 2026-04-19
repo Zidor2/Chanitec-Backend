@@ -20,7 +20,7 @@ async function runMigration() {
         console.log('Successfully connected to MySQL server');
 
         // Read and execute migration file
-        const migrationPath = path.join(__dirname, 'migrations', '001_create_items_table.sql');
+        const migrationPath = path.join(__dirname, 'migrations', '005_create_users_table.sql');
         const migration = fs.readFileSync(migrationPath, 'utf8');
 
         console.log('Running migration...');

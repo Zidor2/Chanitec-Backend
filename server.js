@@ -9,6 +9,7 @@ const { pool, healthCheck } = require('./database/pool');
 const quoteRoutes = require('./routes/quoteRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const splitRoutes = require('./routes/splitRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 const port = Number(process.env.PORT) || 5000;
@@ -19,6 +20,7 @@ const allowedOrigins = [
     'http://localhost:3000'  // Add localhost for development
 ]
 // Middleware
+
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
@@ -42,9 +44,10 @@ app.use('/api/supply-items', require('./routes/supplyItemRoutes'));
 app.use('/api/labor-items', require('./routes/laborItemRoutes'));
 app.use('/api/items', require('./routes/itemRoutes'));
 app.use('/api/debug', require('./routes/debugRoutes'));
-
+app.use('/api/descriptions', require('./routes/descriptionRoutes'));
 app.use('/api/employees', employeeRoutes);
 app.use('/api/splits', splitRoutes);
+app.use('/api/auth', userRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
@@ -67,9 +70,10 @@ app.get('/api', (req, res) => {
             supplyItems: '/api/supply-items',
             laborItems: '/api/labor-items',
             items: '/api/items',
+            descriptions: '/api/descriptions',
             debug: '/api/debug',
-
-            employees: '/api/employees'
+            employees: '/api/employees',
+            auth: '/api/auth'
         }
     });
 });
@@ -78,12 +82,6 @@ app.get('/api', (req, res) => {
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
-});
-
-// 404 handler
-app.use((req, res) => {
-    console.log(`404: ${req.method} ${req.url}`);
-    res.status(404).json({ error: 'Route not found' });
 });
 
 // Health check endpoint
@@ -106,6 +104,12 @@ app.get('/api/health', async (req, res) => {
             timestamp: new Date().toISOString()
         });
     }
+});
+
+// 404 handler
+app.use((req, res) => {
+    console.log(`404: ${req.method} ${req.url}`);
+    res.status(404).json({ error: 'Route not found' });
 });
 
 // Start server
