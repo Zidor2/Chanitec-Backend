@@ -558,7 +558,6 @@ const updateQuote = async (req, res) => {
         clientName,
         siteName,
         object,
-        date,
         supplyDescription,
         laborDescription,
         supplyExchangeRate,
@@ -578,8 +577,11 @@ const updateQuote = async (req, res) => {
         splitId
     } = req.body;
 
-    // Validate required fields
-    if (!clientName || !siteName || !date || !supplyExchangeRate || !supplyMarginRate ||
+    // Generate current date for the update
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Validate required fields (date is now auto-generated)
+    if (!clientName || !siteName || !supplyExchangeRate || !supplyMarginRate ||
         !laborExchangeRate || !laborMarginRate || !totalSuppliesHT || !totalLaborHT ||
         !totalHT || !tva || !totalTTC) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -598,7 +600,7 @@ const updateQuote = async (req, res) => {
                 parentId = ?, split_id = ?
             WHERE id = ?`,
             [
-                clientName, siteName, object, date, supplyDescription, laborDescription,
+                clientName, siteName, object, currentDate, supplyDescription, laborDescription,
                 supplyExchangeRate, supplyMarginRate, laborExchangeRate, laborMarginRate,
                 totalSuppliesHT, totalLaborHT, totalHT, tva, totalTTC, remise || 0,
                 hbc || 0, confirmed || false, reminderDate || null, parentId || null, splitId || null,
