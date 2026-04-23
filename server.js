@@ -48,6 +48,7 @@ app.use('/api/descriptions', require('./routes/descriptionRoutes'));
 app.use('/api/employees', employeeRoutes);
 app.use('/api/splits', splitRoutes);
 app.use('/api/auth', userRoutes);
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 
 // Basic route
 app.get('/', (req, res) => {

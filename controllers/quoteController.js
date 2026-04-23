@@ -2,82 +2,135 @@ const { pool } = require('../database/pool');
 const { safeQuery } = require('../utils/databaseUtils');
 const crypto = require('crypto');
 
-// Get all quotes
+// Helper function to format quote rows
+const formatQuoteRow = (row) => ({
+    id: row.id,
+    clientName: row.client_name,
+    siteName: row.site_name,
+    object: row.object,
+    date: row.date,
+    reminderDate: row.reminderDate,
+    confirmed: row.confirmed,
+    supplyDescription: row.supply_description,
+    laborDescription: row.labor_description,
+    supplyExchangeRate: row.supply_exchange_rate,
+    supplyMarginRate: row.supply_margin_rate,
+    laborExchangeRate: row.labor_exchange_rate,
+    laborMarginRate: row.labor_margin_rate,
+    totalSuppliesHT: row.total_supplies_ht,
+    totalLaborHT: row.total_labor_ht,
+    totalHT: row.total_ht,
+    tva: row.tva,
+    totalTTC: row.total_ttc,
+    remise: row.remise,
+    hbc: row.hbc,
+    parentId: row.parentId,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    splitId: row.split_id,
+});
+
+// Get all quotes with optional pagination and filtering
 const getAllQuotes = async (req, res) => {
     try {
-        console.log('[DEBUG] getAllQuotes - Fetching all quotes');
-        const rows = await safeQuery('SELECT *, HBC AS hbc FROM quotes ORDER BY date DESC, created_at DESC');
+        // Parse pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const skip = (page - 1) * limit;
 
-        console.log(`[DEBUG] getAllQuotes - Retrieved ${rows.length} quotes from database`);
+        // Check if pagination is requested
+        const isPaginated = req.query.page !== undefined;
+
+        // Parse filter parameters
+        const clientId = req.query.clientId;
+        const clientName = req.query.clientName;
+        const dateFrom = req.query.dateFrom;
+        const dateTo = req.query.dateTo;
+        const confirmed = req.query.confirmed;
+
+        // Build dynamic WHERE clause
+        let whereConditions = [];
+        let params = [];
+
+        if (clientId) {
+            whereConditions.push('client_id = ?');
+            params.push(clientId);
+        }
+
+        if (clientName) {
+            whereConditions.push('client_name LIKE ?');
+            params.push(`%${clientName}%`);
+        }
+
+        if (dateFrom) {
+            whereConditions.push('date >= ?');
+            params.push(dateFrom);
+        }
+
+        if (dateTo) {
+            whereConditions.push('date <= ?');
+            params.push(dateTo);
+        }
+
+        if (confirmed !== undefined) {
+            whereConditions.push('confirmed = ?');
+            params.push(confirmed === 'true' || confirmed === '1' ? 1 : 0);
+        }
+
+        const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
+
+        let rows, totalCount;
+
+        if (isPaginated) {
+            // Fetch total count for pagination metadata
+            const countResult = await safeQuery(`SELECT COUNT(*) as total FROM quotes ${whereClause}`, params);
+            totalCount = countResult[0].total;
+
+            // Fetch paginated results with filters
+            rows = await safeQuery(
+                `SELECT *, HBC AS hbc FROM quotes ${whereClause} ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?`,
+                [...params, limit, skip]
+            );
+        } else {
+            // Fetch all quotes with filters (backward compatibility)
+            rows = await safeQuery(`SELECT *, HBC AS hbc FROM quotes ${whereClause} ORDER BY date DESC, created_at DESC`, params);
+        }
 
         // Convert field names from snake_case to camelCase for frontend
-        const quotes = rows.map(row => ({
-            id: row.id,
-            clientName: row.client_name,
-            siteName: row.site_name,
-            object: row.object,
-            date: row.date,
-            reminderDate: row.reminderDate,
-            confirmed: row.confirmed,
-            supplyDescription: row.supply_description,
-            laborDescription: row.labor_description,
-            supplyExchangeRate: row.supply_exchange_rate,
-            supplyMarginRate: row.supply_margin_rate,
-            laborExchangeRate: row.labor_exchange_rate,
-            laborMarginRate: row.labor_margin_rate,
-            totalSuppliesHT: row.total_supplies_ht,
-            totalLaborHT: row.total_labor_ht,
-            totalHT: row.total_ht,
-            tva: row.tva,
-            totalTTC: row.total_ttc,
-            remise: row.remise,
-            hbc: row.hbc,
-            parentId: row.parentId,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-            splitId: row.split_id,
-        }));
+        const quotes = rows.map(formatQuoteRow);
 
-        console.log('[DEBUG] getAllQuotes - Sending formatted quotes to frontend');
-        res.json(quotes);
+        if (isPaginated) {
+            res.json({
+                data: quotes,
+                pagination: {
+                    page,
+                    limit,
+                    total: totalCount,
+                    totalPages: Math.ceil(totalCount / limit)
+                }
+            });
+        } else {
+            res.json(quotes);
+        }
     } catch (error) {
         console.error('Error fetching quotes:', error);
         res.status(500).json({ error: 'Error fetching quotes' });
     }
 };
 
-// Get quote by ID
+// Get quote by ID with optional include parameter
 const getQuoteById = async (req, res) => {
     try {
-        console.log(`[DEBUG] getQuoteById - Fetching quote with ID: ${req.params.id}`);
+        const includeItems = req.query.include === 'items' || req.query.include === 'all';
 
         // Get the quote
         const quoteRows = await safeQuery('SELECT *, HBC AS hbc FROM quotes WHERE id = ?', [req.params.id]);
 
         if (quoteRows.length === 0) {
-            console.log(`[DEBUG] getQuoteById - Quote not found for ID: ${req.params.id}`);
             return res.status(404).json({ error: 'Quote not found' });
         }
 
-        console.log(`[DEBUG] getQuoteById - Found quote ID: ${quoteRows[0].id}, Client: ${quoteRows[0].client_name}`);
-
-        // Get supply items for this quote
-        const supplyItems = await safeQuery(
-            'SELECT * FROM supply_items WHERE quote_id = ?',
-            [req.params.id]
-        );
-
-        console.log(`[DEBUG] getQuoteById - Retrieved ${supplyItems.length} supply items`);
-
-        // Get labor items for this quote
-        const laborItems = await safeQuery(
-            'SELECT * FROM labor_items WHERE quote_id = ?',
-            [req.params.id]
-        );
-
-        console.log(`[DEBUG] getQuoteById - Retrieved ${laborItems.length} labor items`);
-
-        // Format the response
+        // Format the base quote
         const quote = {
             id: quoteRows[0].id,
             clientName: quoteRows[0].client_name,
@@ -101,7 +154,23 @@ const getQuoteById = async (req, res) => {
             createdAt: quoteRows[0].created_at,
             updatedAt: quoteRows[0].updated_at,
             splitId: quoteRows[0].split_id,
-            supplyItems: supplyItems.map(item => ({
+        };
+
+        // Only fetch items if include parameter is specified
+        if (includeItems) {
+            // Get supply items for this quote
+            const supplyItems = await safeQuery(
+                'SELECT * FROM supply_items WHERE quote_id = ?',
+                [req.params.id]
+            );
+
+            // Get labor items for this quote
+            const laborItems = await safeQuery(
+                'SELECT * FROM labor_items WHERE quote_id = ?',
+                [req.params.id]
+            );
+
+            quote.supplyItems = supplyItems.map(item => ({
                 id: item.id,
                 item_id: item.item_id,
                 description: item.description,
@@ -110,8 +179,9 @@ const getQuoteById = async (req, res) => {
                 priceDollar: item.price_dollar,
                 unitPriceDollar: item.unit_price_dollar,
                 totalPriceDollar: item.total_price_dollar
-            })),
-            laborItems: laborItems.map(item => ({
+            }));
+
+            quote.laborItems = laborItems.map(item => ({
                 id: item.id,
                 description: item.description,
                 nbTechnicians: item.nb_technicians,
@@ -121,11 +191,9 @@ const getQuoteById = async (req, res) => {
                 priceDollar: item.price_dollar,
                 unitPriceDollar: item.unit_price_dollar,
                 totalPriceDollar: item.total_price_dollar
-            }))
-        };
+            }));
+        }
 
-        console.log(`[DEBUG] getQuoteById - Quote formatted successfully with remise: ${quote.remise}, hbc: ${quote.hbc}`);
-        console.log('[DEBUG] getQuoteById - Sending quote response to frontend');
         res.json(quote);
     } catch (error) {
         console.error('Error getting quote:', error);

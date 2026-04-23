@@ -3,6 +3,7 @@ const router = express.Router();
 const siteController = require('../controllers/siteController');
 
 // Site routes
+router.get('/batch', siteController.getSitesByClientIds);  // Batch fetch - MUST come before :id
 router.get('/by-client', siteController.getSitesByClientId);
 router.get('/:id', siteController.getSiteById);
 router.post('/', siteController.createSite);

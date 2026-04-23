@@ -1,6 +1,49 @@
 const { pool } = require('../database/pool');
 const { safeQuery } = require('../utils/databaseUtils');
 
+// Get sites for multiple clients in a batch
+const getSitesByClientIds = async (req, res) => {
+    try {
+        const clientIdsParam = req.query.clientIds || req.body.clientIds;
+
+        if (!clientIdsParam) {
+            return res.status(400).json({ error: 'clientIds parameter is required' });
+        }
+
+        // Parse clientIds - can be comma-separated string or array
+        let clientIds = Array.isArray(clientIdsParam)
+            ? clientIdsParam
+            : clientIdsParam.split(',').map(id => id.trim()).filter(id => id);
+
+        if (clientIds.length === 0) {
+            return res.json({}); // Return empty object if no IDs provided
+        }
+
+        // Create placeholders for SQL query
+        const placeholders = clientIds.map(() => '?').join(',');
+
+        // Fetch all sites for the specified clients
+        const rows = await safeQuery(
+            `SELECT * FROM sites WHERE client_id IN (${placeholders}) ORDER BY client_id, name`,
+            clientIds
+        );
+
+        // Group sites by client_id
+        const sitesByClient = {};
+        for (const site of rows) {
+            if (!sitesByClient[site.client_id]) {
+                sitesByClient[site.client_id] = [];
+            }
+            sitesByClient[site.client_id].push(site);
+        }
+
+        res.json(sitesByClient);
+    } catch (error) {
+        console.error('Error fetching sites by client IDs:', error);
+        res.status(500).json({ error: 'Error fetching sites' });
+    }
+};
+
 // Get site by ID
 const getSiteById = async (req, res) => {
     try {
@@ -128,6 +171,7 @@ const deleteSite = async (req, res) => {
 module.exports = {
     getSiteById,
     getSitesByClientId,
+    getSitesByClientIds,
     createSite,
     updateSite,
     deleteSite
