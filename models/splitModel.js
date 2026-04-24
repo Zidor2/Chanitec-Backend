@@ -1,52 +1,52 @@
 const { pool } = require('../database/pool');
 const { safeQuery } = require('../utils/databaseUtils');
 
-class Split {
+class splits {
     static async create({ code, name, description, puissance, site_id }) {
         const result = await safeQuery(
-            'INSERT INTO split (Code, name, description, puissance, site_id) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO splits (Code, name, description, puissance, site_id) VALUES (?, ?, ?, ?, ?)',
             [code, name, description, puissance, site_id]
         );
         return this.findById(code);
     }
 
     static async findById(code) {
-        const rows = await safeQuery('SELECT * FROM split WHERE Code = ?', [code]);
+        const rows = await safeQuery('SELECT * FROM splits WHERE Code = ?', [code]);
         return rows[0];
     }
 
     static async findAll() {
-        const rows = await safeQuery('SELECT * FROM split');
+        const rows = await safeQuery('SELECT * FROM splits');
         return rows;
     }
 
     static async findBySiteId(site_id) {
-        const rows = await safeQuery('SELECT * FROM split WHERE site_id = ?', [site_id]);
+        const rows = await safeQuery('SELECT * FROM splits WHERE site_id = ?', [site_id]);
         return rows;
     }
 
     static async update(code, { name, description, puissance, site_id }) {
         await safeQuery(
-            'UPDATE split SET name = ?, description = ?, puissance = ?, site_id = ? WHERE Code = ?',
+            'UPDATE splits SET name = ?, description = ?, puissance = ?, site_id = ? WHERE Code = ?',
             [name, description, puissance, site_id, code]
         );
         return this.findById(code);
     }
 
     static async delete(code) {
-        await safeQuery('DELETE FROM split WHERE Code = ?', [code]);
+        await safeQuery('DELETE FROM splits WHERE Code = ?', [code]);
     }
 
     static async getSite(spliteCode) {
         const rows = await safeQuery(
-            'SELECT c.* FROM sites c JOIN split s ON c.id = s.site_id WHERE s.Code = ?',
+            'SELECT c.* FROM sites c JOIN splits s ON c.id = s.site_id WHERE s.Code = ?',
             [spliteCode]
         );
         return rows[0];
     }
 
     /**
-     * Returns client + site for a split code (global uniqueness check).
+     * Returns client + site for a splits code (global uniqueness check).
      */
     static async findLocationByCode(code) {
         const rows = await safeQuery(
@@ -54,7 +54,7 @@ class Split {
                     site.name AS site_name,
                     c.id AS client_id,
                     c.name AS client_name
-             FROM split s
+             FROM splits s
              INNER JOIN sites site ON site.id = s.site_id
              INNER JOIN clients c ON c.id = site.client_id
              WHERE s.Code = ?`,
@@ -64,4 +64,4 @@ class Split {
     }
 }
 
-module.exports = Split;
+module.exports = splits;
