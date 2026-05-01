@@ -7,11 +7,14 @@ class splits {
             'INSERT INTO splits (Code, name, description, puissance, site_id) VALUES (?, ?, ?, ?, ?)',
             [code, name, description, puissance, site_id]
         );
-        return this.findById(code);
+        // Return the newly created split with its auto-generated id
+        const lastId = result.insertId;
+        return this.findById(lastId);
     }
 
-    static async findById(code) {
-        const rows = await safeQuery('SELECT * FROM splits WHERE Code = ?', [code]);
+    // Find by id (new primary key)
+    static async findById(id) {
+        const rows = await safeQuery('SELECT * FROM splits WHERE id = ?', [id]);
         return rows[0];
     }
 
@@ -25,16 +28,44 @@ class splits {
         return rows;
     }
 
-    static async update(code, { name, description, puissance, site_id }) {
+    // Update by id (new primary key)
+    static async update(id, { code, name, description, puissance, site_id }) {
+        // If code is being updated, check if new code already exists (excluding current record)
+        if (code) {
+            const existing = await safeQuery('SELECT id FROM splits WHERE Code = ? AND id != ?', [code, id]);
+            if (existing.length > 0) {
+                throw new Error('Split code already exists');
+            }
+        }
+
         await safeQuery(
-            'UPDATE splits SET name = ?, description = ?, puissance = ?, site_id = ? WHERE Code = ?',
-            [name, description, puissance, site_id, code]
+            'UPDATE splits SET Code = ?, name = ?, description = ?, puissance = ?, site_id = ? WHERE id = ?',
+            [code, name, description, puissance, site_id, id]
         );
-        return this.findById(code);
+        return this.findById(id);
     }
 
-    static async delete(code) {
-        await safeQuery('DELETE FROM splits WHERE Code = ?', [code]);
+    // Delete by id (new primary key)
+    static async delete(id) {
+        await safeQuery('DELETE FROM splits WHERE id = ?', [id]);
+    }
+
+    // Check if split needs updating by comparing all attributes
+    static async needsUpdate(id, { code, name, description, puissance, site_id }) {
+        const current = await this.findById(id);
+        if (!current) return false;
+
+        // Compare all attributes (handle null/undefined values)
+        const puissanceEqual = (current.puissance == puissance) || (current.puissance === null && puissance === null);
+        const siteIdEqual = current.site_id === site_id;
+
+        return !(
+            current.Code === code &&
+            current.name === name &&
+            current.description === description &&
+            puissanceEqual &&
+            siteIdEqual
+        );
     }
 
     static async getSite(spliteCode) {

@@ -35,10 +35,10 @@ const getSplitLocationByCode = async (req, res) => {
     }
 };
 
-// Get split by code
+// Get split by id
 const getSplitById = async (req, res) => {
     try {
-        const split = await Split.findById(req.params.code);
+        const split = await Split.findById(req.params.id);
         if (!split) {
             return res.status(404).json({ error: 'Split not found' });
         }
@@ -66,14 +66,29 @@ const createSplit = async (req, res) => {
 
 // Update split
 const updateSplit = async (req, res) => {
-    const { name, description, puissance, site_id } = req.body;
+    const { code, name, description, puissance, site_id } = req.body;
     try {
-        const split = await Split.update(req.params.code, { name, description, puissance, site_id });
-        if (!split) {
+        // Check if split exists
+        const existingSplit = await Split.findById(req.params.id);
+        if (!existingSplit) {
             return res.status(404).json({ error: 'Split not found' });
         }
+
+        // Check if any attributes have changed
+        const needsUpdate = await Split.needsUpdate(req.params.id, { code, name, description, puissance, site_id });
+
+        if (!needsUpdate) {
+            // No changes needed, return current split
+            return res.json(existingSplit);
+        }
+
+        // Perform the update
+        const split = await Split.update(req.params.id, { code, name, description, puissance, site_id });
         res.json(split);
     } catch (error) {
+        if (error.message === 'Split code already exists') {
+            return res.status(409).json({ error: 'Split code already exists' });
+        }
         console.error('Error updating split:', error);
         res.status(500).json({ error: 'Error updating split' });
     }
@@ -82,7 +97,7 @@ const updateSplit = async (req, res) => {
 // Delete split
 const deleteSplit = async (req, res) => {
     try {
-        await Split.delete(req.params.code);
+        await Split.delete(req.params.id);
         res.status(204).send();
     } catch (error) {
         console.error('Error deleting split:', error);
