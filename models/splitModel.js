@@ -2,10 +2,10 @@ const { pool } = require('../database/pool');
 const { safeQuery } = require('../utils/databaseUtils');
 
 class splits {
-    static async create({ code, name, description, puissance, site_id }) {
+    static async create({ code, name, description, puissance, site_id, freon }) {
         const result = await safeQuery(
-            'INSERT INTO splits (Code, name, description, puissance, site_id) VALUES (?, ?, ?, ?, ?)',
-            [code, name, description, puissance, site_id]
+            'INSERT INTO splits (Code, name, description, puissance, site_id, freon) VALUES (?, ?, ?, ?, ?, ?)',
+            [code, name, description, puissance, site_id, freon || null]
         );
         // Return the newly created split with its auto-generated id
         const lastId = result.insertId;
@@ -29,7 +29,7 @@ class splits {
     }
 
     // Update by id (new primary key)
-    static async update(id, { code, name, description, puissance, site_id }) {
+    static async update(id, { code, name, description, puissance, site_id, freon }) {
         // If code is being updated, check if new code already exists (excluding current record)
         if (code) {
             const existing = await safeQuery('SELECT id FROM splits WHERE Code = ? AND id != ?', [code, id]);
@@ -39,8 +39,8 @@ class splits {
         }
 
         await safeQuery(
-            'UPDATE splits SET Code = ?, name = ?, description = ?, puissance = ?, site_id = ? WHERE id = ?',
-            [code, name, description, puissance, site_id, id]
+            'UPDATE splits SET Code = ?, name = ?, description = ?, puissance = ?, site_id = ?, freon = ? WHERE id = ?',
+            [code, name, description, puissance, site_id, freon || null, id]
         );
         return this.findById(id);
     }
@@ -51,20 +51,22 @@ class splits {
     }
 
     // Check if split needs updating by comparing all attributes
-    static async needsUpdate(id, { code, name, description, puissance, site_id }) {
+    static async needsUpdate(id, { code, name, description, puissance, site_id, freon }) {
         const current = await this.findById(id);
         if (!current) return false;
 
         // Compare all attributes (handle null/undefined values)
         const puissanceEqual = (current.puissance == puissance) || (current.puissance === null && puissance === null);
         const siteIdEqual = current.site_id === site_id;
+        const freonEqual = (current.freon === freon) || (current.freon === null && freon === null) || (current.freon === null && !freon);
 
         return !(
             current.Code === code &&
             current.name === name &&
             current.description === description &&
             puissanceEqual &&
-            siteIdEqual
+            siteIdEqual &&
+            freonEqual
         );
     }
 

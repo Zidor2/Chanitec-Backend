@@ -51,12 +51,16 @@ const getSplitById = async (req, res) => {
 
 // Create new split
 const createSplit = async (req, res) => {
-    const { code, name, description, puissance, site_id } = req.body;
+    const { code, name, description, puissance, site_id, freon } = req.body;
     if (!code || !name || !site_id) {
         return res.status(400).json({ error: 'Code, name, and site_id are required' });
     }
+    // Validate freon if provided
+    if (freon && !['R22', 'R410a'].includes(freon)) {
+        return res.status(400).json({ error: 'Invalid freon type. Must be R22 or R410a' });
+    }
     try {
-        const split = await Split.create({ code, name, description, puissance, site_id });
+        const split = await Split.create({ code, name, description, puissance, site_id, freon: freon || null });
         res.status(201).json(split);
     } catch (error) {
         console.error('Error creating split:', error);
@@ -66,7 +70,11 @@ const createSplit = async (req, res) => {
 
 // Update split
 const updateSplit = async (req, res) => {
-    const { code, name, description, puissance, site_id } = req.body;
+    const { code, name, description, puissance, site_id, freon } = req.body;
+    // Validate freon if provided
+    if (freon && !['R22', 'R410a'].includes(freon)) {
+        return res.status(400).json({ error: 'Invalid freon type. Must be R22 or R410a' });
+    }
     try {
         // Check if split exists
         const existingSplit = await Split.findById(req.params.id);
@@ -75,7 +83,7 @@ const updateSplit = async (req, res) => {
         }
 
         // Check if any attributes have changed
-        const needsUpdate = await Split.needsUpdate(req.params.id, { code, name, description, puissance, site_id });
+        const needsUpdate = await Split.needsUpdate(req.params.id, { code, name, description, puissance, site_id, freon: freon || null });
 
         if (!needsUpdate) {
             // No changes needed, return current split
@@ -83,7 +91,7 @@ const updateSplit = async (req, res) => {
         }
 
         // Perform the update
-        const split = await Split.update(req.params.id, { code, name, description, puissance, site_id });
+        const split = await Split.update(req.params.id, { code, name, description, puissance, site_id, freon: freon || null });
         res.json(split);
     } catch (error) {
         if (error.message === 'Split code already exists') {
