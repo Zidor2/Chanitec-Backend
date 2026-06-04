@@ -49,6 +49,8 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/splits', splitRoutes);
 app.use('/api/auth', userRoutes);
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
+app.use('/api/planning', require('./routes/planningRoutes'));
+app.use('/api/planning-sites', require('./routes/planningSiteRoutes'));
 
 // Basic route
 app.get('/', (req, res) => {
@@ -74,7 +76,9 @@ app.get('/api', (req, res) => {
             descriptions: '/api/descriptions',
             debug: '/api/debug',
             employees: '/api/employees',
-            auth: '/api/auth'
+            auth: '/api/auth',
+            planning: '/api/planning',
+            planningSites: '/api/planning-sites'
         }
     });
 });

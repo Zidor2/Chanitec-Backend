@@ -138,6 +138,38 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_users_username (username)
 );
 
+-- Planning table
+CREATE TABLE IF NOT EXISTS planning (
+    id VARCHAR(36) PRIMARY KEY,
+    client_id VARCHAR(36) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    status ENUM('planned','active','finished') DEFAULT 'planned',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+    INDEX idx_planning_client_id (client_id)
+);
+
+-- Planning Sites table
+CREATE TABLE IF NOT EXISTS planning_sites (
+    id VARCHAR(36) PRIMARY KEY,
+    planning_id VARCHAR(36) NOT NULL,
+    site_id VARCHAR(36) NOT NULL,
+    planned_date DATETIME,
+    effective_date DATETIME,
+    status ENUM('planned','active','finished') DEFAULT 'planned',
+    is_delayed TINYINT(1) DEFAULT 0,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (planning_id) REFERENCES planning(id) ON DELETE CASCADE,
+    FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE,
+    INDEX idx_planning_sites_planning_id (planning_id),
+    INDEX idx_planning_sites_site_id (site_id),
+    INDEX idx_planning_sites_status (status)
+);
+
 -- Drop existing indexes if they exist
 -- Note: DROP INDEX IF EXISTS requires MySQL 8.0+
 -- DROP INDEX IF EXISTS idx_clients_name ON clients;
