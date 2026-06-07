@@ -228,6 +228,18 @@ const createPlanningSitesBatch = async (req, res) => {
         return res.status(400).json({ error: 'sites must be a non-empty array' });
     }
 
+    // Validate each site entry
+    const validStatuses = ['planned', 'active', 'finished'];
+    for (let i = 0; i < sites.length; i++) {
+        const s = sites[i];
+        if (!s || !s.site_id) {
+            return res.status(400).json({ error: `Each site must include site_id (error at index ${i})` });
+        }
+        if (s.status && !validStatuses.includes(s.status)) {
+            return res.status(400).json({ error: `Invalid status for site at index ${i}. Must be one of: ${validStatuses.join(', ')}` });
+        }
+    }
+
     try {
         // Prepare rows for batch insert
         const rows = sites.map(s => [

@@ -170,6 +170,21 @@ CREATE TABLE IF NOT EXISTS planning_sites (
     INDEX idx_planning_sites_status (status)
 );
 
+-- Planning Split table
+CREATE TABLE IF NOT EXISTS planning_split (
+    id VARCHAR(36) PRIMARY KEY,
+    planning_site_id VARCHAR(36) NOT NULL,
+    split_id VARCHAR(36) DEFAULT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (planning_site_id) REFERENCES planning_sites(id) ON DELETE CASCADE,
+    FOREIGN KEY (split_id) REFERENCES splits(id) ON DELETE SET NULL,
+    INDEX idx_planning_split_planning_site_id (planning_site_id),
+    INDEX idx_planning_split_split_id (split_id),
+    INDEX idx_planning_split_status (status)
+);
+
 -- Drop existing indexes if they exist
 -- Note: DROP INDEX IF EXISTS requires MySQL 8.0+
 -- DROP INDEX IF EXISTS idx_clients_name ON clients;
