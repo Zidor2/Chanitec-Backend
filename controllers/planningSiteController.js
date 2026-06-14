@@ -133,12 +133,20 @@ const updatePlanningSite = async (req, res) => {
             return res.status(404).json({ error: 'Planning site not found' });
         }
 
+        // Normalize inputs: convert empty date strings to null to avoid SQL errors,
+        // and coerce is_delayed to integer when provided.
         const updateData = {};
-        if (planned_date !== undefined) updateData.planned_date = planned_date;
-        if (effective_date !== undefined) updateData.effective_date = effective_date;
+        if (planned_date !== undefined) {
+            updateData.planned_date = planned_date === '' ? null : planned_date;
+        }
+        if (effective_date !== undefined) {
+            updateData.effective_date = effective_date === '' ? null : effective_date;
+        }
         if (status !== undefined) updateData.status = status;
-        if (is_delayed !== undefined) updateData.is_delayed = is_delayed;
-        if (description !== undefined) updateData.description = description;
+        if (is_delayed !== undefined) updateData.is_delayed = Number(is_delayed) ? 1 : 0;
+        if (description !== undefined) updateData.description = description === '' ? null : description;
+
+        console.log('Updating planning_site', { id, updateData });
 
         const updatedPlanningSite = await PlanningSite.update(id, updateData);
 
@@ -149,7 +157,8 @@ const updatePlanningSite = async (req, res) => {
             code: error.code,
             stack: error.stack
         });
-        res.status(500).json({ error: 'Error updating planning site' });
+        // Return error details for easier debugging in dev (avoid exposing stack in production)
+        res.status(500).json({ error: 'Error updating planning site', details: error.message });
     }
 };
 

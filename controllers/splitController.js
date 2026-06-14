@@ -56,8 +56,8 @@ const createSplit = async (req, res) => {
         return res.status(400).json({ error: 'Code, name, and site_id are required' });
     }
     // Validate freon if provided
-    if (freon && !['R22', 'R410a'].includes(freon)) {
-        return res.status(400).json({ error: 'Invalid freon type. Must be R22 or R410a' });
+    if (freon && !['R22', 'R410a', 'R134a', 'R32', 'R404'].includes(freon)) {
+        return res.status(400).json({ error: 'Invalid freon type. Must be one of R22, R410a, R134a, R32, R404' });
     }
     try {
         const split = await Split.create({ code, name, description, puissance, site_id, freon: freon || null });
@@ -72,8 +72,8 @@ const createSplit = async (req, res) => {
 const updateSplit = async (req, res) => {
     const { code, name, description, puissance, site_id, freon } = req.body;
     // Validate freon if provided
-    if (freon && !['R22', 'R410a'].includes(freon)) {
-        return res.status(400).json({ error: 'Invalid freon type. Must be R22 or R410a' });
+    if (freon && !['R22', 'R410a', 'R134a', 'R32', 'R404'].includes(freon)) {
+        return res.status(400).json({ error: 'Invalid freon type. Must be one of R22, R410a, R134a, R32, R404' });
     }
     try {
         // Check if split exists
