@@ -5,6 +5,7 @@ const siteController = require('../controllers/siteController');
 // Site routes
 router.get('/batch', siteController.getSitesByClientIds);  // Batch fetch - MUST come before :id
 router.get('/by-client', siteController.getSitesByClientId);
+router.get('/', siteController.getAllSites);
 router.get('/:id', siteController.getSiteById);
 router.post('/', siteController.createSite);
 router.put('/:id', siteController.updateSite);

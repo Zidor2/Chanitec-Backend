@@ -168,10 +168,22 @@ const deleteSite = async (req, res) => {
     }
 };
 
+// Get all sites
+const getAllSites = async (req, res) => {
+    try {
+        const rows = await safeQuery('SELECT * FROM sites');
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching all sites:', error);
+        res.status(500).json({ error: 'Error fetching sites' });
+    }
+};
+
 module.exports = {
     getSiteById,
     getSitesByClientId,
     getSitesByClientIds,
+    getAllSites,
     createSite,
     updateSite,
     deleteSite

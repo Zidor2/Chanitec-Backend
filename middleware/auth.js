@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { canManageUsers } = require('../utils/userPermissions');
 
 const authenticate = (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -31,7 +32,10 @@ const authorize = (allowedRoles) => {
             });
         }
 
-        if (!allowedRoles.includes(req.user.role)) {
+        const hasRole = allowedRoles.includes(req.user.role);
+        const hasUserManagerAccess = allowedRoles.includes('admin') && canManageUsers(req.user);
+
+        if (!hasRole && !hasUserManagerAccess) {
             return res.status(403).json({
                 error: 'Access Denied',
                 message: 'Insufficient permissions'

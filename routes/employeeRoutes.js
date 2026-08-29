@@ -5,6 +5,9 @@ const employeeController = require('../controllers/employeeController');
 // Get all employees
 router.get('/', employeeController.getAllEmployees);
 
+// Get interventions signed by an employee
+router.get('/:id/interventions', employeeController.getEmployeeInterventions);
+
 // Get employee by ID
 router.get('/:id', employeeController.getEmployeeById);
 

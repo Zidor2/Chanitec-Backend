@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const quoteController = require('../controllers/quoteController');
+const { authenticate } = require('../middleware/auth');
+
+router.use(authenticate);
 
 // Quote routes
 router.get('/', quoteController.getAllQuotes);

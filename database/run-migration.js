@@ -19,13 +19,23 @@ async function runMigration() {
         const connection = await mysql.createConnection(config);
         console.log('Successfully connected to MySQL server');
 
-        // Read and execute migration file
-        const migrationPath = path.join(__dirname, 'migrations', '005_create_users_table.sql');
-        const migration = fs.readFileSync(migrationPath, 'utf8');
+        const migrationDir = path.join(__dirname, 'migrations');
+        const migrationFiles = fs.readdirSync(migrationDir)
+            .filter((file) => file.endsWith('.sql'))
+            .sort();
 
-        console.log('Running migration...');
-        await connection.query(migration);
-        console.log('Migration completed successfully!');
+        if (migrationFiles.length === 0) {
+            console.log('No migration files found.');
+        }
+
+        for (const migrationFile of migrationFiles) {
+            const migrationPath = path.join(migrationDir, migrationFile);
+            const migration = fs.readFileSync(migrationPath, 'utf8');
+            console.log(`Running migration: ${migrationFile}`);
+            await connection.query(migration);
+        }
+
+        console.log('All migrations completed successfully!');
 
         await connection.end();
     } catch (error) {

@@ -1,6 +1,14 @@
 const { pool } = require('../database/pool');
 const { safeQuery } = require('../utils/databaseUtils');
 const crypto = require('crypto');
+const { canSeeAllQuotes, parsePermissions } = require('../utils/userPermissions');
+
+const QUOTE_LIST_SELECT = `SELECT quotes.*, quotes.HBC AS hbc,
+    users.username AS created_by_username,
+    users.role AS created_by_role,
+    users.permissions AS created_by_permissions
+    FROM quotes
+    LEFT JOIN users ON users.id = quotes.user_id`;
 
 // Helper function to format quote rows
 const formatQuoteRow = (row) => ({
@@ -28,7 +36,31 @@ const formatQuoteRow = (row) => ({
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     splitId: row.split_id,
+    userId: row.user_id ?? null,
+    createdByUsername: row.created_by_username || null,
+    createdByRole: row.created_by_role || null,
+    createdByPermissions: parsePermissions(row.created_by_permissions),
 });
+
+const canAccessQuoteRecord = (req, quoteRow) => {
+    if (canSeeAllQuotes(req.user)) return true;
+    const requesterId = req.user?.id;
+    if (requesterId == null || quoteRow?.user_id == null) return false;
+    return Number(quoteRow.user_id) === Number(requesterId);
+};
+
+const ensureQuoteAccess = async (req, res, quoteId) => {
+    const rows = await safeQuery('SELECT * FROM quotes WHERE id = ?', [quoteId]);
+    if (rows.length === 0) {
+        res.status(404).json({ error: 'Quote not found' });
+        return null;
+    }
+    if (!canAccessQuoteRecord(req, rows[0])) {
+        res.status(403).json({ error: 'Access Denied', message: 'You can only access quotes you created' });
+        return null;
+    }
+    return rows[0];
+};
 
 // Get all quotes with optional pagination and filtering
 const getAllQuotes = async (req, res) => {
@@ -58,23 +90,28 @@ const getAllQuotes = async (req, res) => {
         }
 
         if (clientName) {
-            whereConditions.push('client_name LIKE ?');
+            whereConditions.push('quotes.client_name LIKE ?');
             params.push(`%${clientName}%`);
         }
 
         if (dateFrom) {
-            whereConditions.push('date >= ?');
+            whereConditions.push('quotes.date >= ?');
             params.push(dateFrom);
         }
 
         if (dateTo) {
-            whereConditions.push('date <= ?');
+            whereConditions.push('quotes.date <= ?');
             params.push(dateTo);
         }
 
         if (confirmed !== undefined) {
-            whereConditions.push('confirmed = ?');
+            whereConditions.push('quotes.confirmed = ?');
             params.push(confirmed === 'true' || confirmed === '1' ? 1 : 0);
+        }
+
+        if (!canSeeAllQuotes(req.user)) {
+            whereConditions.push('quotes.user_id = ?');
+            params.push(req.user.id);
         }
 
         const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
@@ -88,12 +125,12 @@ const getAllQuotes = async (req, res) => {
 
             // Fetch paginated results with filters
             rows = await safeQuery(
-                `SELECT *, HBC AS hbc FROM quotes ${whereClause} ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?`,
+                `${QUOTE_LIST_SELECT} ${whereClause} ORDER BY quotes.date DESC, quotes.created_at DESC LIMIT ? OFFSET ?`,
                 [...params, limit, skip]
             );
         } else {
             // Fetch all quotes with filters (backward compatibility)
-            rows = await safeQuery(`SELECT *, HBC AS hbc FROM quotes ${whereClause} ORDER BY date DESC, created_at DESC`, params);
+            rows = await safeQuery(`${QUOTE_LIST_SELECT} ${whereClause} ORDER BY quotes.date DESC, quotes.created_at DESC`, params);
         }
 
         // Convert field names from snake_case to camelCase for frontend
@@ -130,6 +167,10 @@ const getQuoteById = async (req, res) => {
             return res.status(404).json({ error: 'Quote not found' });
         }
 
+        if (!canAccessQuoteRecord(req, quoteRows[0])) {
+            return res.status(403).json({ error: 'Access Denied', message: 'You can only access quotes you created' });
+        }
+
         // Format the base quote
         const quote = {
             id: quoteRows[0].id,
@@ -154,6 +195,7 @@ const getQuoteById = async (req, res) => {
             createdAt: quoteRows[0].created_at,
             updatedAt: quoteRows[0].updated_at,
             splitId: quoteRows[0].split_id,
+            userId: quoteRows[0].user_id ?? null,
         };
 
         // Only fetch items if include parameter is specified
@@ -211,6 +253,9 @@ const setReminderDate = async (req, res) => {
             return res.status(400).json({ error: 'Invalid reminder date format' });
         }
 
+        const existing = await ensureQuoteAccess(req, res, req.params.id);
+        if (!existing) return;
+
         const result = await safeQuery(
             'UPDATE quotes SET reminderDate = ? WHERE id = ?',
             [reminderDate, req.params.id]
@@ -247,6 +292,7 @@ const setReminderDate = async (req, res) => {
             confirmed: updatedQuote[0].confirmed,
             reminderDate: updatedQuote[0].reminderDate,
             splitId: updatedQuote[0].split_id,
+            userId: updatedQuote[0].user_id ?? null,
             createdAt: updatedQuote[0].created_at,
             updatedAt: updatedQuote[0].updated_at,
         };
@@ -275,6 +321,9 @@ const confirmQuote = async (req, res) => {
             console.log(`[DEBUG] confirmQuote - Validation failed: number_chanitec missing or not string`);
             return res.status(400).json({ error: 'number_chanitec is required and must be a string' });
         }
+
+        const existing = await ensureQuoteAccess(req, res, req.params.id);
+        if (!existing) return;
 
         // Start a transaction for atomicity
         const connection = await pool.getConnection();
@@ -370,6 +419,10 @@ const createQuote = async (req, res) => {
     console.log(JSON.stringify(req.body, null, 2));
     console.log('[DEBUG] createQuote - === END REQUEST BODY ===');
 
+    if (!req.user?.id) {
+        return res.status(401).json({ error: 'Authentication Required', message: 'You must be logged in to create a quote' });
+    }
+
     // Start a transaction
     const connection = await pool.getConnection();
     await connection.beginTransaction();
@@ -464,8 +517,8 @@ const createQuote = async (req, res) => {
             + 'supply_exchange_rate, supply_margin_rate,\n'
             + 'labor_exchange_rate, labor_margin_rate,\n'
             + 'total_supplies_ht, total_labor_ht, total_ht,\n'
-            + 'tva, total_ttc, remise, HBC, `parentId`, split_id\n'
-            + ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            + 'tva, total_ttc, remise, HBC, `parentId`, split_id, user_id\n'
+            + ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 quoteId,
                 quoteData.client_name,
@@ -486,7 +539,8 @@ const createQuote = async (req, res) => {
                 quoteData.remise,
                 quoteData.hbc,
                 quoteData.parentId || 0,
-                quoteData.split_id
+                quoteData.split_id,
+                req.user.id
             ]
         );
 
@@ -574,6 +628,7 @@ const createQuote = async (req, res) => {
             parentId: quoteRows[0].parentId,
             createdAt: quoteRows[0].created_at,
             updatedAt: quoteRows[0].updated_at,
+            userId: quoteRows[0].user_id ?? null,
             supplyItems: supplyItems.map(item => ({
                 id: item.id,
                 description: item.description,
@@ -656,6 +711,9 @@ const updateQuote = async (req, res) => {
     }
 
     try {
+        const existing = await ensureQuoteAccess(req, res, req.params.id);
+        if (!existing) return;
+
         console.log(`[DEBUG] updateQuote - Updating quote ID: ${req.params.id} with remise=${remise || 0}, hbc=${hbc || 0}`);
         const result = await safeQuery(
             `UPDATE quotes SET
@@ -706,6 +764,7 @@ const updateQuote = async (req, res) => {
             confirmed: updatedQuote[0].confirmed,
             reminderDate: updatedQuote[0].reminderDate,
             splitId: updatedQuote[0].split_id,
+            userId: updatedQuote[0].user_id ?? null,
             createdAt: updatedQuote[0].created_at,
             updatedAt: updatedQuote[0].updated_at,
         };
@@ -722,6 +781,9 @@ const updateQuote = async (req, res) => {
 const deleteQuote = async (req, res) => {
     try {
         console.log(`[DEBUG] deleteQuote - Deleting quote ID: ${req.params.id}`);
+        const existing = await ensureQuoteAccess(req, res, req.params.id);
+        if (!existing) return;
+
         const result = await safeQuery('DELETE FROM quotes WHERE id = ?', [req.params.id]);
         if (result.affectedRows === 0) {
             console.log(`[DEBUG] deleteQuote - Quote not found for ID: ${req.params.id}`);

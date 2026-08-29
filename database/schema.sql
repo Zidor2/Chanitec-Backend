@@ -62,6 +62,8 @@ CREATE TABLE IF NOT EXISTS quotes (
     reminderDate DATE NULL COMMENT 'Reminder date for follow-up',
     split_id VARCHAR(50) NULL COMMENT 'Reference to split/group ID',
     number_chanitec INT NULL COMMENT 'Chanitec order number',
+    user_id INT NULL COMMENT 'User who created the quote',
+    INDEX idx_quotes_user_id (user_id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -134,9 +136,29 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(60) NOT NULL DEFAULT 'viewer',
+    permissions TEXT NULL,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_users_username (username)
+);
+
+-- Activity log of user actions
+CREATE TABLE IF NOT EXISTS activity_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    username VARCHAR(255) NULL,
+    action VARCHAR(150) NOT NULL,
+    entity_type VARCHAR(80) NULL,
+    entity_id VARCHAR(64) NULL,
+    method VARCHAR(10) NOT NULL,
+    path VARCHAR(255) NOT NULL,
+    status_code INT NOT NULL,
+    details TEXT NULL,
+    ip_address VARCHAR(45) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_activity_created (created_at),
+    INDEX idx_activity_user (user_id),
+    INDEX idx_activity_action (action)
 );
 
 -- Planning table
@@ -184,6 +206,57 @@ CREATE TABLE IF NOT EXISTS planning_split (
     INDEX idx_planning_split_planning_site_id (planning_site_id),
     INDEX idx_planning_split_split_id (split_id),
     INDEX idx_planning_split_status (status)
+);
+
+-- Interventions table
+CREATE TABLE IF NOT EXISTS interventions (
+    intervention_id INT AUTO_INCREMENT PRIMARY KEY,
+    quote_id CHAR(36) DEFAULT NULL,
+    client_id CHAR(36) DEFAULT NULL,
+    site_id CHAR(36) DEFAULT NULL,
+    intervention_date DATE NOT NULL,
+    heure_arrive TIME DEFAULT NULL,
+    heure_depart TIME DEFAULT NULL,
+    object TEXT DEFAULT NULL,
+    raison TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_interventions_quote_id (quote_id),
+    INDEX idx_interventions_client_id (client_id),
+    INDEX idx_interventions_site_id (site_id),
+    CONSTRAINT fk_interventions_quote_id FOREIGN KEY (quote_id)
+        REFERENCES quotes(id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_interventions_client_id FOREIGN KEY (client_id)
+        REFERENCES clients(id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_interventions_site_id FOREIGN KEY (site_id)
+        REFERENCES sites(id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE
+);
+
+-- Intervention unité extérieure table
+CREATE TABLE IF NOT EXISTS intervention_unite_exterieure (
+    unite_exterieure_id INT NOT NULL AUTO_INCREMENT,
+    intervention_id INT NOT NULL,
+    absence_echauffement TINYINT(1) DEFAULT NULL,
+    absence_vibration TINYINT(1) DEFAULT NULL,
+    serrage_connexions_electriques TINYINT(1) DEFAULT NULL,
+    depoussierage_cablage_electrique TINYINT(1) DEFAULT NULL,
+    nettoyage_condenseur_eau_produit_detergent TINYINT(1) DEFAULT NULL,
+    verification_unite_exterieure TINYINT(1) DEFAULT NULL,
+    verification_fonctionnement_variateur_vitesse TINYINT(1) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (unite_exterieure_id),
+    KEY idx_intervention_unite_exterieure_intervention_id (intervention_id),
+    CONSTRAINT fk_intervention_unite_exterieure_intervention_id FOREIGN KEY (intervention_id)
+        REFERENCES interventions (intervention_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 -- Drop existing indexes if they exist

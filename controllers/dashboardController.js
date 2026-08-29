@@ -1,11 +1,18 @@
 const { safeQuery } = require('../utils/databaseUtils');
+const { canSeeAllQuotes } = require('../utils/userPermissions');
 
-// Get dashboard summary - combines quotes, clients, and splits counts
+const quoteFilter = (req) => {
+    if (canSeeAllQuotes(req.user)) {
+        return { where: '', params: [] };
+    }
+    return { where: 'WHERE user_id = ?', params: [req.user.id] };
+};
+
 const getDashboardSummary = async (req, res) => {
     try {
-        // Fetch all counts in parallel
+        const { where, params } = quoteFilter(req);
         const [quotesResult, clientsResult, splitsResult] = await Promise.all([
-            safeQuery('SELECT COUNT(*) as count FROM quotes'),
+            safeQuery(`SELECT COUNT(*) as count FROM quotes ${where}`, params),
             safeQuery('SELECT COUNT(*) as count FROM clients'),
             safeQuery('SELECT COUNT(*) as count FROM splits')
         ]);
@@ -24,11 +31,13 @@ const getDashboardSummary = async (req, res) => {
     }
 };
 
-// Get dashboard stats with detailed information
 const getDashboardStats = async (req, res) => {
     try {
-        // Fetch quotes count and pending quotes
-        const quotesResult = await safeQuery('SELECT COUNT(*) as total, SUM(CASE WHEN confirmed = 0 OR confirmed IS NULL THEN 1 ELSE 0 END) as pending FROM quotes');
+        const { where, params } = quoteFilter(req);
+        const quotesResult = await safeQuery(
+            `SELECT COUNT(*) as total, SUM(CASE WHEN confirmed = 0 OR confirmed IS NULL THEN 1 ELSE 0 END) as pending FROM quotes ${where}`,
+            params
+        );
 
         const clientsResult = await safeQuery('SELECT COUNT(*) as count FROM clients');
         const splitsResult = await safeQuery('SELECT COUNT(*) as count FROM splits');

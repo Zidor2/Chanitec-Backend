@@ -29,6 +29,7 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(require('./middleware/activityLog'));
 
 // Debug middleware
 app.use((req, res, next) => {
@@ -48,10 +49,18 @@ app.use('/api/descriptions', require('./routes/descriptionRoutes'));
 app.use('/api/employees', employeeRoutes);
 app.use('/api/splits', splitRoutes);
 app.use('/api/auth', userRoutes);
+app.use('/api/logs', require('./routes/activityLogRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/planning', require('./routes/planningRoutes'));
 app.use('/api/planning-sites', require('./routes/planningSiteRoutes'));
 app.use('/api/planning-splits', require('./routes/planningSplitRoutes'));
+app.use('/api/interventions', require('./routes/interventionRoutes'));
+app.use('/api/intervention-unite-exterieure', require('./routes/interventionUniteExterieureRoutes'));
+app.use('/api/intervention-mesure-releve', require('./routes/interventionMesureReleveRoutes'));
+app.use('/api/intervention-essais-electrique', require('./routes/interventionEssaisElectriqueRoutes'));
+app.use('/api/intervention-liaisons-electriques', require('./routes/interventionLiaisonsElectriquesRoutes'));
+app.use('/api/intervention-coffret-electrique', require('./routes/interventionCoffretElectriqueRoutes'));
+app.use('/api/intervention-observations', require('./routes/interventionObservationsRoutes'));
 
 // Basic route
 app.get('/', (req, res) => {
@@ -78,9 +87,14 @@ app.get('/api', (req, res) => {
             debug: '/api/debug',
             employees: '/api/employees',
             auth: '/api/auth',
+            logs: '/api/logs',
             planning: '/api/planning',
             planningSites: '/api/planning-sites',
-            planningSplits: '/api/planning-splits'
+            planningSplits: '/api/planning-splits',
+            interventions: '/api/interventions',
+            interventionUniteExterieure: '/api/intervention-unite-exterieure',
+            interventionMesureReleve: '/api/intervention-mesure-releve',
+            interventionObservations: '/api/intervention-observations'
         }
     });
 });

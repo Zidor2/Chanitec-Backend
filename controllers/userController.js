@@ -1,91 +1,82 @@
-const { pool } = require('../database/pool');
 const { safeQuery } = require('../utils/databaseUtils');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const {
+    normalizePermissions,
+    roleFromPermissions,
+    toPublicUser
+} = require('../utils/userPermissions');
 
-// Get all users (admin only)
+const USER_COLUMNS = 'id, username, role, permissions, createdAt, updatedAt';
+
 const getAllUsers = async (req, res) => {
     try {
-        const rows = await safeQuery('SELECT id, username, role, createdAt, updatedAt FROM users');
-        res.json(rows);
+        const rows = await safeQuery(`SELECT ${USER_COLUMNS} FROM users`);
+        res.json(rows.map(toPublicUser));
     } catch (error) {
         console.error('Error fetching users:', error);
         res.status(500).json({ error: 'Error fetching users' });
     }
 };
 
-// Get user by ID (admin only)
 const getUserById = async (req, res) => {
     try {
-        const rows = await safeQuery('SELECT id, username, role, createdAt, updatedAt FROM users WHERE id = ?', [req.params.id]);
+        const rows = await safeQuery(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [req.params.id]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
-        res.json(rows[0]);
+        res.json(toPublicUser(rows[0]));
     } catch (error) {
         console.error('Error fetching user:', error);
         res.status(500).json({ error: 'Error fetching user' });
     }
 };
 
-// Create new user (admin only)
 const createUser = async (req, res) => {
-    const { username, password, role } = req.body;
+    const { username, password, role, permissions } = req.body;
 
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    if (!role || !['admin', 'editor', 'viewer', 'user'].includes(role)) {
-        return res.status(400).json({ error: 'Valid role is required (admin, editor, viewer, user)' });
-    }
+    const normalizedPermissions = normalizePermissions(permissions, role || 'user');
+    const derivedRole = roleFromPermissions(normalizedPermissions);
 
     try {
-        // Check if username already exists
         const existingUser = await safeQuery('SELECT id FROM users WHERE username = ?', [username]);
         if (existingUser.length > 0) {
             return res.status(409).json({ error: 'Username already exists' });
         }
 
-        // Hash password
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-
+        const hashedPassword = await bcrypt.hash(password, 10);
         const result = await safeQuery(
-            'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
-            [username, hashedPassword, role]
+            'INSERT INTO users (username, password, role, permissions, createdAt, updatedAt) VALUES (?, ?, ?, ?, CURRENT_DATE, CURRENT_DATE)',
+            [username, hashedPassword, derivedRole, JSON.stringify(normalizedPermissions)]
         );
 
-        // Get the newly created user
         const rows = await safeQuery(
-            'SELECT id, username, role, createdAt, updatedAt FROM users WHERE id = ?',
+            `SELECT ${USER_COLUMNS} FROM users WHERE id = ?`,
             [result.insertId]
         );
 
-        res.status(201).json(rows[0]);
+        res.status(201).json(toPublicUser(rows[0]));
     } catch (error) {
         console.error('Error creating user:', error);
         res.status(500).json({ error: 'Error creating user' });
     }
 };
 
-// Update user (admin only)
 const updateUser = async (req, res) => {
-    const { username, password, role } = req.body;
+    const { username, password, role, permissions } = req.body;
     const userId = req.params.id;
 
-    if (!role || !['admin', 'editor', 'viewer', 'user'].includes(role)) {
-        return res.status(400).json({ error: 'Valid role is required (admin, editor, viewer, user)' });
-    }
-
     try {
-        // Check if user exists
-        const existingUser = await safeQuery('SELECT id FROM users WHERE id = ?', [userId]);
-        if (existingUser.length === 0) {
+        const existingRows = await safeQuery(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [userId]);
+        if (existingRows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Check if username is taken by another user
+        const existing = existingRows[0];
         if (username) {
             const usernameCheck = await safeQuery('SELECT id FROM users WHERE username = ? AND id != ?', [username, userId]);
             if (usernameCheck.length > 0) {
@@ -93,41 +84,36 @@ const updateUser = async (req, res) => {
             }
         }
 
-        let query = 'UPDATE users SET role = ?, updatedAt = CURRENT_DATE';
-        let params = [role];
+        const normalizedPermissions = normalizePermissions(
+            permissions === undefined ? existing.permissions : permissions,
+            role || existing.role
+        );
+        const derivedRole = roleFromPermissions(normalizedPermissions);
+
+        const fields = ['role = ?', 'permissions = ?', 'updatedAt = CURRENT_DATE'];
+        const params = [derivedRole, JSON.stringify(normalizedPermissions)];
 
         if (username) {
-            query = 'UPDATE users SET username = ?, role = ?, updatedAt = CURRENT_DATE';
-            params = [username, role];
+            fields.unshift('username = ?');
+            params.unshift(username);
         }
 
         if (password) {
-            const hashedPassword = await bcrypt.hash(password, 10);
-            query = username ?
-                'UPDATE users SET username = ?, password = ?, role = ?, updatedAt = CURRENT_DATE' :
-                'UPDATE users SET password = ?, role = ?, updatedAt = CURRENT_DATE';
-            params = username ? [username, hashedPassword, role] : [hashedPassword, role];
+            fields.push('password = ?');
+            params.push(await bcrypt.hash(password, 10));
         }
 
-        query += ' WHERE id = ?';
         params.push(userId);
+        await safeQuery(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, params);
 
-        await safeQuery(query, params);
-
-        // Get updated user
-        const rows = await safeQuery(
-            'SELECT id, username, role, createdAt, updatedAt FROM users WHERE id = ?',
-            [userId]
-        );
-
-        res.json(rows[0]);
+        const rows = await safeQuery(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [userId]);
+        res.json(toPublicUser(rows[0]));
     } catch (error) {
         console.error('Error updating user:', error);
         res.status(500).json({ error: 'Error updating user' });
     }
 };
 
-// Delete user (admin only)
 const deleteUser = async (req, res) => {
     try {
         const result = await safeQuery('DELETE FROM users WHERE id = ?', [req.params.id]);
@@ -141,7 +127,6 @@ const deleteUser = async (req, res) => {
     }
 };
 
-// Login user
 const loginUser = async (req, res) => {
     const { username, password } = req.body;
 
@@ -157,29 +142,32 @@ const loginUser = async (req, res) => {
 
         const user = rows[0];
         const isValidPassword = await bcrypt.compare(password, user.password);
-
         if (!isValidPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // Generate JWT token
+        const publicUser = toPublicUser(user);
         const token = jwt.sign(
             {
-                id: user.id,
-                username: user.username,
-                role: user.role
+                id: publicUser.id,
+                username: publicUser.username,
+                role: publicUser.role,
+                permissions: publicUser.permissions
             },
             process.env.JWT_SECRET || 'your-secret-key',
             { expiresIn: '24h' }
         );
 
+        req.user = {
+            id: publicUser.id,
+            username: publicUser.username,
+            role: publicUser.role,
+            permissions: publicUser.permissions
+        };
+
         res.json({
             token,
-            user: {
-                id: user.id,
-                username: user.username,
-                role: user.role
-            }
+            user: publicUser
         });
     } catch (error) {
         console.error('Error logging in:', error);
@@ -187,14 +175,13 @@ const loginUser = async (req, res) => {
     }
 };
 
-// Get current user profile
 const getCurrentUser = async (req, res) => {
     try {
-        const rows = await safeQuery('SELECT id, username, role, createdAt, updatedAt FROM users WHERE id = ?', [req.user.id]);
+        const rows = await safeQuery(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [req.user.id]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
-        res.json(rows[0]);
+        res.json(toPublicUser(rows[0]));
     } catch (error) {
         console.error('Error fetching current user:', error);
         res.status(500).json({ error: 'Error fetching current user' });

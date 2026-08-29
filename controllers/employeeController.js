@@ -29,6 +29,22 @@ const getEmployeeById = async (req, res) => {
     }
 };
 
+const getEmployeeInterventions = async (req, res) => {
+    try {
+        const employee = await Employee.findById(req.params.id);
+        if (!employee) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        const { findSignedInterventionsForEmployee } = require('../utils/technicianScore');
+        const interventions = await findSignedInterventionsForEmployee(req.params.id);
+        res.json(interventions);
+    } catch (error) {
+        console.error('Error fetching employee interventions:', error);
+        res.status(500).json({ error: 'Error fetching employee interventions' });
+    }
+};
+
 // Create new employee
 const createEmployee = async (req, res) => {
     const { full_name, civil_status, birth_date, entry_date, seniority, contract_type, job_title, fonction } = req.body;
@@ -89,6 +105,7 @@ const deleteEmployee = async (req, res) => {
 module.exports = {
     getAllEmployees,
     getEmployeeById,
+    getEmployeeInterventions,
     createEmployee,
     updateEmployee,
     deleteEmployee
